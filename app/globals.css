@@ -1,0 +1,187 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --radius: 0.625rem;
+
+    /* Locked Enakt design tokens (shared with enakt.live) */
+    --paper: #faf9f5;
+    --ink: #191917;
+    --signal: #16456b;
+    --verified: #2e6f4e;
+    --flagged: #9a6b00;
+    --gap: #6f6b63;
+    --abort: #a33a2c;
+    --merged: #6b4fbb;
+
+    --signal-soft: #e9eff6;
+    --verified-soft: #e8f0eb;
+    --flagged-soft: #f5eedb;
+    --gap-soft: #efede8;
+    --abort-soft: #f6e7e4;
+    --merged-soft: #ede8f8;
+
+    /* Semantic surface tokens */
+    --background: #faf9f5;
+    --foreground: #191917;
+    --card: #ffffff;
+    --card-foreground: #191917;
+    --popover: #ffffff;
+    --popover-foreground: #191917;
+    --primary: #191917;
+    --primary-foreground: #faf9f5;
+    --secondary: #f1efe9;
+    --secondary-foreground: #191917;
+    --muted: #f1efe9;
+    --muted-foreground: #6f6b63;
+    --accent: #f1efe9;
+    --accent-foreground: #191917;
+    --border: #e4e1d9;
+    --input: #e4e1d9;
+    --ring: #16456b;
+    --sidebar: #f4f2ec;
+  }
+
+  .dark {
+    --paper: #141413;
+    --ink: #ecebe6;
+    --signal: #7fb0da;
+    --verified: #7cc29a;
+    --flagged: #d9b35c;
+    --gap: #9b968c;
+    --abort: #e0776a;
+    --merged: #b39df0;
+
+    --signal-soft: #1a2a3a;
+    --verified-soft: #16281f;
+    --flagged-soft: #2e2510;
+    --gap-soft: #24231f;
+    --abort-soft: #331c18;
+    --merged-soft: #261e3a;
+
+    --background: #141413;
+    --foreground: #ecebe6;
+    --card: #1c1c1a;
+    --card-foreground: #ecebe6;
+    --popover: #1f1f1d;
+    --popover-foreground: #ecebe6;
+    --primary: #ecebe6;
+    --primary-foreground: #141413;
+    --secondary: #262623;
+    --secondary-foreground: #ecebe6;
+    --muted: #232320;
+    --muted-foreground: #9b968c;
+    --accent: #262623;
+    --accent-foreground: #ecebe6;
+    --border: #2d2d2a;
+    --input: #2d2d2a;
+    --ring: #7fb0da;
+    --sidebar: #181817;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: var(--signal-soft);
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 8px;
+  }
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-muted;
+  }
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full animate-shimmer;
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--foreground) 5%, transparent), transparent);
+  }
+}
+
+/* React Flow theming */
+.react-flow {
+  --xy-background-color: var(--background);
+  --xy-edge-stroke: var(--border);
+  --xy-edge-stroke-width: 1.5;
+  --xy-minimap-background-color: var(--card);
+  --xy-minimap-mask-background-color: color-mix(in srgb, var(--background) 70%, transparent);
+  --xy-controls-button-background-color: var(--card);
+  --xy-controls-button-background-color-hover: var(--muted);
+  --xy-controls-button-color: var(--foreground);
+  --xy-controls-button-border-color: var(--border);
+  --xy-attribution-background-color: transparent;
+}
+.react-flow__attribution {
+  display: none;
+}
+.react-flow__edge.edge-flow path.react-flow__edge-path {
+  stroke: var(--verified);
+  stroke-dasharray: 6 6;
+  animation: dash 0.8s linear infinite;
+}
+.react-flow__edge.edge-dep path.react-flow__edge-path {
+  stroke: var(--signal);
+  opacity: 0.7;
+}
+.react-flow__edge.edge-held path.react-flow__edge-path {
+  stroke: var(--flagged);
+  stroke-dasharray: 2 4;
+  opacity: 0.8;
+}
+.react-flow__controls {
+  box-shadow: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.react-flow__minimap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.react-flow__node {
+  cursor: pointer;
+}
+.react-flow__handle {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
