@@ -3,37 +3,36 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Activity, Check, ChevronsUpDown, GitPullRequest, KeyRound, LayoutDashboard, Map as MapIcon, Database, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, FlaskConical } from "lucide-react"
+import { Bot, Check, ChevronsUpDown, FlaskConical, Hammer, KeyRound, LayoutDashboard, Map as MapIcon, PanelLeftClose, PanelLeftOpen, ScrollText, Settings, Sparkles } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { EMark, Wordmark } from "@/components/demo/logo"
-import { WORKSPACE } from "@/lib/demo/fixtures"
+import { ActorAvatar } from "@/components/demo/actor"
+import { CURRENT_USER, WORKSPACE, href } from "@/lib/demo/fixtures"
 import { useDemo } from "@/lib/demo/store"
 import { cn } from "@/lib/utils"
 
 export const NAV = [
-  { href: "/northfield", label: "Overview", icon: LayoutDashboard, exact: true },
-  { href: "/northfield/intake", label: "Intake", icon: Sparkles },
-  { href: "/northfield/map", label: "Map", icon: MapIcon },
-  { href: "/northfield/sources", label: "Sources", icon: Database },
-  { href: "/northfield/merge-requests", label: "Merge requests", icon: GitPullRequest, badge: 1 },
-  { href: "/northfield/access", label: "Access", icon: KeyRound },
-  { href: "/northfield/activity", label: "Activity", icon: Activity },
-  { href: "/northfield/settings", label: "Settings", icon: Settings },
+  { href: href(), label: "Overview", icon: LayoutDashboard, exact: true, key: "1" },
+  { href: href("/intake"), label: "Intake", icon: Sparkles, key: "2" },
+  { href: href("/map"), label: "Map", icon: MapIcon, key: "3" },
+  { href: href("/build"), label: "Build", icon: Hammer, key: "4", badge: "mr" as const },
+  { href: href("/permissions"), label: "Permissions", icon: KeyRound, key: "5" },
+  { href: href("/agents"), label: "Agents", icon: Bot, key: "6" },
+  { href: href("/audit"), label: "Audit log", icon: ScrollText },
+  { href: href("/settings"), label: "Settings", icon: Settings },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
-  const { state, dispatch } = useDemo()
-  const collapsed = state.sidebarCollapsed
+  const collapsed = useDemo((s) => s.sidebarCollapsed)
+  const setSidebar = useDemo((s) => s.setSidebar)
+  const rec = useDemo((s) => s.rec)
+  const mergeStatus = useDemo((s) => s.mergeStatus)
 
   return (
     <aside
-      className={cn(
-        "group/sidebar flex h-full shrink-0 flex-col border-r bg-[var(--sidebar)] transition-[width] duration-200",
-        collapsed ? "w-[60px]" : "w-[232px]",
-        "max-[1100px]:w-[60px]",
-      )}
+      className={cn("group/sidebar flex h-full shrink-0 flex-col border-r bg-[var(--sidebar)] transition-[width] duration-200", collapsed ? "w-[60px]" : "w-[232px]", "max-[1100px]:w-[60px]")}
       data-collapsed={collapsed}
     >
       <div className={cn("flex h-14 items-center gap-2 px-3", collapsed && "justify-center px-0")}>
@@ -51,7 +50,7 @@ export function Sidebar() {
               )}
               aria-label="Switch workspace"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-signal text-[11px] font-semibold text-white dark:text-ink">N</span>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-signal text-[11px] font-semibold text-white dark:text-ink">A</span>
               {!collapsed && (
                 <>
                   <span className="min-w-0 flex-1 truncate font-medium max-[1100px]:hidden">{WORKSPACE.name}</span>
@@ -63,7 +62,7 @@ export function Sidebar() {
           <DropdownMenuContent align="start" className="w-64">
             <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
             <DropdownMenuItem className="gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-signal text-[10px] font-semibold text-white dark:text-ink">N</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-signal text-[10px] font-semibold text-white dark:text-ink">A</span>
               <span className="flex-1 truncate">{WORKSPACE.name}</span>
               <Check className="h-4 w-4" />
             </DropdownMenuItem>
@@ -98,9 +97,12 @@ export function Sidebar() {
             >
               <Icon className={cn("h-4 w-4 shrink-0", active ? "text-signal" : "")} />
               {!collapsed && <span className="flex-1 truncate max-[1100px]:hidden">{item.label}</span>}
-              {!collapsed && item.badge && state.mergeStatus !== "merged" && (
-                <span className="rounded-full bg-signal-soft px-1.5 text-[10px] font-semibold tabular text-signal max-[1100px]:hidden">{item.badge}</span>
+              {!collapsed && item.badge === "mr" && mergeStatus !== "merged" && (
+                <span className="rounded-full bg-signal-soft px-1.5 text-[10px] font-semibold tabular text-signal max-[1100px]:hidden" title="1 merge request waiting for you">
+                  1
+                </span>
               )}
+              {!collapsed && item.key && !rec && <kbd className="font-mono text-[10px] text-muted-foreground/60 max-[1100px]:hidden">{item.key}</kbd>}
               {active && <span className="absolute -left-2 top-1.5 h-5 w-0.5 rounded-r bg-signal" />}
             </Link>
           )
@@ -115,7 +117,7 @@ export function Sidebar() {
       </nav>
 
       <div className={cn("flex flex-col gap-2 border-t p-2", collapsed && "items-center")}>
-        {!state.rec && (
+        {!rec && (
           <div
             className={cn(
               "flex items-center gap-1.5 rounded-md border border-dashed border-flagged/40 bg-flagged-soft/60 px-2 py-1 text-[11px] font-medium text-flagged",
@@ -125,12 +127,21 @@ export function Sidebar() {
             title="Demo workspace: all data is synthetic"
           >
             <FlaskConical className="h-3 w-3 shrink-0" />
-            {!collapsed && <span className="max-[1100px]:hidden">Demo workspace</span>}
+            {!collapsed && <span className="max-[1100px]:hidden">Demo workspace · synthetic data</span>}
           </div>
         )}
+        <div className={cn("flex items-center gap-2 rounded-md px-1 py-1", collapsed && "justify-center px-0")}>
+          <ActorAvatar id={CURRENT_USER.id} size="sm" />
+          {!collapsed && (
+            <div className="min-w-0 max-[1100px]:hidden">
+              <div className="truncate text-xs font-medium leading-4">{CURRENT_USER.name}</div>
+              <div className="truncate text-[11px] leading-4 text-muted-foreground">{CURRENT_USER.role}</div>
+            </div>
+          )}
+        </div>
         <button
-          onClick={() => dispatch({ type: "sidebar", value: !collapsed })}
-          className="flex h-8 w-full items-center justify-center gap-2 rounded-md text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-[1100px]:hidden"
+          onClick={() => setSidebar(!collapsed)}
+          className="flex h-7 w-full items-center justify-center gap-2 rounded-md text-xs text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring max-[1100px]:hidden"
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}

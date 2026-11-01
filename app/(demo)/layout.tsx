@@ -1,5 +1,3 @@
-import { AppShell } from "@/components/shell/app-shell"
-
-export default function DemoLayout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>
+export default function DemoGroupLayout({ children }: { children: React.ReactNode }) {
+  return children
 }

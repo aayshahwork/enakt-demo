@@ -34,8 +34,8 @@ const mono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: "Enakt — Northfield Wealth Partners",
-  description: "Every database, tracker, and workflow the firm runs on, mapped and consolidated into one system of record.",
+  title: "Enakt — Ashcombe Trust Company",
+  description: "The firm brain: every source, owner, workflow and access rule, mapped from interviews and enforced at the data layer. Nothing leaves the building.",
   robots: { index: false, follow: false },
 }
 

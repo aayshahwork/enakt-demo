@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 export function Truncate({ children, className, text }: { children: React.ReactNode; className?: string; text?: string }) {
   const ref = React.useRef<HTMLSpanElement>(null)
   const [clipped, setClipped] = React.useState(false)
-  const { state } = useDemo()
+  const rec = useDemo((s) => s.rec)
   React.useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -23,7 +23,7 @@ export function Truncate({ children, className, text }: { children: React.ReactN
       {children}
     </span>
   )
-  if (!clipped || state.rec) return span
+  if (!clipped || rec) return span
   return (
     <Tooltip>
       <TooltipTrigger asChild>{span}</TooltipTrigger>

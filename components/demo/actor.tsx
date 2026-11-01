@@ -2,15 +2,15 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { ACTORS, type Actor } from "@/lib/demo/fixtures"
 import { cn } from "@/lib/utils"
-import { Bot } from "lucide-react"
+import { Bot, Users } from "lucide-react"
 
 const HUES: Record<string, string> = {
   dana: "bg-signal-soft text-signal",
   marcus: "bg-verified-soft text-verified",
   priya: "bg-flagged-soft text-flagged",
   sam: "bg-merged-soft text-merged",
-  elena: "bg-abort-soft text-abort",
-  tom: "bg-gap-soft text-gap",
+  chris: "bg-abort-soft text-abort",
+  planning: "bg-gap-soft text-gap",
 }
 
 export function getActor(id: string): Actor {
@@ -27,6 +27,13 @@ export function ActorAvatar({ id, size = "md", className }: { id: string; size?:
       </span>
     )
   }
+  if (a.kind === "group") {
+    return (
+      <span className={cn("inline-flex shrink-0 items-center justify-center rounded-full bg-gap-soft text-gap", dim, className)} title={a.name}>
+        <Users className="h-[55%] w-[55%]" />
+      </span>
+    )
+  }
   return (
     <Avatar className={cn(dim, className)}>
       <AvatarFallback className={cn("font-medium", HUES[a.id] ?? "bg-muted")}>{a.initials}</AvatarFallback>
@@ -34,11 +41,10 @@ export function ActorAvatar({ id, size = "md", className }: { id: string; size?:
   )
 }
 
-export function ModelBadge({ model, className }: { model?: Actor["model"]; className?: string }) {
-  if (!model) return null
+export function LocalModelBadge({ className }: { className?: string }) {
   return (
-    <Badge variant={model === "Claude" ? "signal" : "gap"} className={cn("font-mono text-[10px]", className)}>
-      {model}
+    <Badge variant="gap" className={cn("font-mono text-[10px]", className)}>
+      local model
     </Badge>
   )
 }
@@ -48,17 +54,17 @@ export function ActorName({ id, withRole, withModel = true, className }: { id: s
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
       <span className={cn("font-medium", a.kind === "agent" && "font-mono text-[13px]")}>{a.name}</span>
-      {withModel && a.kind === "agent" && <ModelBadge model={a.model} />}
+      {withModel && a.kind === "agent" && <LocalModelBadge />}
       {withRole && a.role && <span className="text-muted-foreground">· {a.role}</span>}
     </span>
   )
 }
 
-export function ActorChip({ id, size = "sm", withRole }: { id: string; size?: "xs" | "sm" | "md"; withRole?: boolean }) {
+export function ActorChip({ id, size = "sm", withRole, withModel }: { id: string; size?: "xs" | "sm" | "md"; withRole?: boolean; withModel?: boolean }) {
   return (
     <span className="inline-flex items-center gap-2">
       <ActorAvatar id={id} size={size} />
-      <ActorName id={id} withRole={withRole} />
+      <ActorName id={id} withRole={withRole} withModel={withModel} />
     </span>
   )
 }

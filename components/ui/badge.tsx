@@ -16,6 +16,7 @@ const badgeVariants = cva(
         gap: "border-transparent bg-gap-soft text-gap",
         abort: "border-transparent bg-abort-soft text-abort",
         merged: "border-transparent bg-merged-soft text-merged",
+        stale: "border-transparent bg-stale-soft text-stale",
       },
     },
     defaultVariants: { variant: "default" },

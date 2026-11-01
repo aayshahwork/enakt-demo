@@ -1,38 +1,58 @@
 import { Badge } from "@/components/ui/badge"
 import { VERDICT_LABEL, type Verdict } from "@/lib/demo/fixtures"
 import { cn } from "@/lib/utils"
-import { AlertTriangle, CheckCircle2, Clock, HelpCircle, Lock } from "lucide-react"
+import { AlertTriangle, Brain, CheckCircle2, Circle, Clock, HelpCircle, Lock, Wrench } from "lucide-react"
 
-export const VERDICT_VARIANT: Record<Verdict, "verified" | "flagged" | "abort" | "gap" | "signal"> = {
-  ready: "verified",
-  stale: "flagged",
+export const VERDICT_VARIANT: Record<Verdict, "verified" | "flagged" | "abort" | "gap" | "signal" | "merged" | "stale" | "outline"> = {
+  unchecked: "outline",
+  inbrain: "verified",
+  ready: "signal",
+  cleaning: "flagged",
   conflict: "abort",
+  stale: "stale",
   unverified: "gap",
-  restricted: "signal",
+  restricted: "merged",
 }
 
 export const VERDICT_COLOR: Record<Verdict, string> = {
-  ready: "var(--verified)",
-  stale: "var(--flagged)",
+  unchecked: "var(--gap)",
+  inbrain: "var(--verified)",
+  ready: "var(--signal)",
+  cleaning: "var(--flagged)",
   conflict: "var(--abort)",
+  stale: "var(--stale)",
   unverified: "var(--gap)",
-  restricted: "var(--signal)",
+  restricted: "var(--merged)",
 }
 
-const ICON: Record<Verdict, React.ComponentType<{ className?: string }>> = {
+export const VERDICT_HEX: Record<Verdict, string> = {
+  unchecked: "#b8b4aa",
+  inbrain: "#2e6f4e",
+  ready: "#16456b",
+  cleaning: "#9a6b00",
+  conflict: "#a33a2c",
+  stale: "#b4591e",
+  unverified: "#6f6b63",
+  restricted: "#6b4fbb",
+}
+
+export const VERDICT_ICON: Record<Verdict, React.ComponentType<{ className?: string }>> = {
+  unchecked: Circle,
+  inbrain: Brain,
   ready: CheckCircle2,
-  stale: Clock,
+  cleaning: Wrench,
   conflict: AlertTriangle,
+  stale: Clock,
   unverified: HelpCircle,
   restricted: Lock,
 }
 
-export function VerdictPill({ verdict, className, icon = true }: { verdict: Verdict; className?: string; icon?: boolean }) {
-  const Icon = ICON[verdict]
+export function VerdictPill({ verdict, className, icon = true, label }: { verdict: Verdict; className?: string; icon?: boolean; label?: string }) {
+  const Icon = VERDICT_ICON[verdict]
   return (
-    <Badge variant={VERDICT_VARIANT[verdict]} className={cn("whitespace-nowrap", className)}>
+    <Badge variant={VERDICT_VARIANT[verdict]} className={cn("whitespace-nowrap", verdict === "unchecked" && "border-dashed text-muted-foreground", className)}>
       {icon && <Icon className="h-3 w-3" />}
-      {VERDICT_LABEL[verdict]}
+      {label ?? VERDICT_LABEL[verdict]}
     </Badge>
   )
 }

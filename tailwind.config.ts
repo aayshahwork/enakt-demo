@@ -15,6 +15,7 @@ const config: Config = {
         gap: { DEFAULT: "var(--gap)", soft: "var(--gap-soft)" },
         abort: { DEFAULT: "var(--abort)", soft: "var(--abort-soft)" },
         merged: { DEFAULT: "var(--merged)", soft: "var(--merged-soft)" },
+        stale: { DEFAULT: "var(--stale)", soft: "var(--stale-soft)" },
         // shadcn semantic tokens
         border: "var(--border)",
         input: "var(--input)",
@@ -44,11 +45,15 @@ const config: Config = {
         blink: { "0%, 100%": { opacity: "1" }, "50%": { opacity: "0" } },
         dash: { to: { strokeDashoffset: "-20" } },
         shimmer: { "100%": { transform: "translateX(100%)" } },
+        pulsedot: { "0%, 100%": { opacity: "1", transform: "scale(1)" }, "50%": { opacity: "0.45", transform: "scale(0.8)" } },
+        flashred: { "0%, 100%": { boxShadow: "0 0 0 0 transparent" }, "30%": { boxShadow: "0 0 0 4px color-mix(in srgb, var(--abort) 35%, transparent)" } },
       },
       animation: {
         "cursor-blink": "blink 1s step-end infinite",
         dash: "dash 1s linear infinite",
         shimmer: "shimmer 1.6s infinite",
+        pulsedot: "pulsedot 1.2s ease-in-out infinite",
+        flashred: "flashred 0.9s ease-out 2",
       },
     },
   },

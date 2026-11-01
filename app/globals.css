@@ -15,6 +15,7 @@
     --gap: #6f6b63;
     --abort: #a33a2c;
     --merged: #6b4fbb;
+    --stale: #b4591e;
 
     --signal-soft: #e9eff6;
     --verified-soft: #e8f0eb;
@@ -22,6 +23,7 @@
     --gap-soft: #efede8;
     --abort-soft: #f6e7e4;
     --merged-soft: #ede8f8;
+    --stale-soft: #f8e9df;
 
     /* Semantic surface tokens */
     --background: #faf9f5;
@@ -53,6 +55,7 @@
     --gap: #9b968c;
     --abort: #e0776a;
     --merged: #b39df0;
+    --stale: #e39a6a;
 
     --signal-soft: #1a2a3a;
     --verified-soft: #16281f;
@@ -60,6 +63,7 @@
     --gap-soft: #24231f;
     --abort-soft: #331c18;
     --merged-soft: #261e3a;
+    --stale-soft: #33221a;
 
     --background: #141413;
     --foreground: #ecebe6;
@@ -174,6 +178,40 @@
 }
 .react-flow__handle {
   opacity: 0;
+}
+
+/* Recording mode: larger hit areas, calmer chrome */
+.rec-mode button:not(.react-flow__controls-button),
+.rec-mode [role="menuitem"],
+.rec-mode [role="option"] {
+  min-height: 34px;
+}
+.rec-mode .react-flow__node {
+  padding: 4px;
+  margin: -4px;
+}
+
+.react-flow__edge.edge-brain path.react-flow__edge-path {
+  stroke: var(--verified);
+  stroke-dasharray: 6 6;
+  animation: dash 0.8s linear infinite;
+}
+.react-flow__edge.edge-dep path.react-flow__edge-path {
+  stroke: var(--signal);
+  opacity: 0.7;
+}
+.react-flow__edge.edge-hidden {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+.react-flow__edge {
+  transition: opacity 300ms ease-out;
+}
+.react-flow__node.hidden-node {
+  pointer-events: none;
+}
+.react-flow__minimap-mask {
+  transition: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
