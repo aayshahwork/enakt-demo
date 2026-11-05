@@ -3,7 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bot, Check, ChevronsUpDown, FlaskConical, Hammer, KeyRound, LayoutDashboard, Map as MapIcon, PanelLeftClose, PanelLeftOpen, ScrollText, Settings, Sparkles } from "lucide-react"
+import { Bot, CalendarRange, Check, ChevronsUpDown, FlaskConical, GitPullRequest, Home, Inbox, KeyRound, ListChecks, Map as MapIcon, PanelLeftClose, PanelLeftOpen, ScrollText, Settings } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { EMark, Wordmark } from "@/components/demo/logo"
@@ -13,12 +13,14 @@ import { useDemo } from "@/lib/demo/store"
 import { cn } from "@/lib/utils"
 
 export const NAV = [
-  { href: href(), label: "Overview", icon: LayoutDashboard, exact: true, key: "1" },
-  { href: href("/intake"), label: "Intake", icon: Sparkles, key: "2" },
+  { href: href(), label: "Home", icon: Home, exact: true, key: "1" },
+  { href: href("/requests"), label: "Requests", icon: Inbox, key: "2" },
   { href: href("/map"), label: "Map", icon: MapIcon, key: "3" },
-  { href: href("/build"), label: "Build", icon: Hammer, key: "4", badge: "mr" as const },
-  { href: href("/permissions"), label: "Permissions", icon: KeyRound, key: "5" },
-  { href: href("/agents"), label: "Agents", icon: Bot, key: "6" },
+  { href: href("/readiness"), label: "Readiness", icon: ListChecks, key: "4" },
+  { href: href("/connections"), label: "Connections", icon: GitPullRequest, key: "5", badge: "cr" as const },
+  { href: href("/agents"), label: "Agents", icon: Bot, key: "7" },
+  { href: href("/policies"), label: "Policies", icon: KeyRound, key: "6" },
+  { href: href("/rollout"), label: "Rollout", icon: CalendarRange, key: "8" },
   { href: href("/audit"), label: "Audit log", icon: ScrollText },
   { href: href("/settings"), label: "Settings", icon: Settings },
 ]
@@ -28,7 +30,7 @@ export function Sidebar() {
   const collapsed = useDemo((s) => s.sidebarCollapsed)
   const setSidebar = useDemo((s) => s.setSidebar)
   const rec = useDemo((s) => s.rec)
-  const mergeStatus = useDemo((s) => s.mergeStatus)
+  const crStatus = useDemo((s) => s.crStatus)
 
   return (
     <aside
@@ -50,7 +52,7 @@ export function Sidebar() {
               )}
               aria-label="Switch workspace"
             >
-              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-signal text-[11px] font-semibold text-white dark:text-ink">A</span>
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-signal text-[11px] font-semibold text-white dark:text-ink">C</span>
               {!collapsed && (
                 <>
                   <span className="min-w-0 flex-1 truncate font-medium max-[1100px]:hidden">{WORKSPACE.name}</span>
@@ -62,7 +64,7 @@ export function Sidebar() {
           <DropdownMenuContent align="start" className="w-64">
             <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
             <DropdownMenuItem className="gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded bg-signal text-[10px] font-semibold text-white dark:text-ink">A</span>
+              <span className="flex h-5 w-5 items-center justify-center rounded bg-signal text-[10px] font-semibold text-white dark:text-ink">C</span>
               <span className="flex-1 truncate">{WORKSPACE.name}</span>
               <Check className="h-4 w-4" />
             </DropdownMenuItem>
@@ -97,8 +99,8 @@ export function Sidebar() {
             >
               <Icon className={cn("h-4 w-4 shrink-0", active ? "text-signal" : "")} />
               {!collapsed && <span className="flex-1 truncate max-[1100px]:hidden">{item.label}</span>}
-              {!collapsed && item.badge === "mr" && mergeStatus !== "merged" && (
-                <span className="rounded-full bg-signal-soft px-1.5 text-[10px] font-semibold tabular text-signal max-[1100px]:hidden" title="1 merge request waiting for you">
+              {!collapsed && item.badge === "cr" && crStatus !== "merged" && (
+                <span className="rounded-full bg-signal-soft px-1.5 text-[10px] font-semibold tabular text-signal max-[1100px]:hidden" title="CR-7 is waiting for two approvals">
                   1
                 </span>
               )}
@@ -124,10 +126,10 @@ export function Sidebar() {
               collapsed && "justify-center px-1.5",
               "max-[1100px]:justify-center max-[1100px]:px-1.5",
             )}
-            title="Demo workspace: all data is synthetic"
+            title="Synthetic firm: all people, deals and numbers are illustrative"
           >
             <FlaskConical className="h-3 w-3 shrink-0" />
-            {!collapsed && <span className="max-[1100px]:hidden">Demo workspace · synthetic data</span>}
+            {!collapsed && <span className="max-[1100px]:hidden">Synthetic firm · illustrative data</span>}
           </div>
         )}
         <div className={cn("flex items-center gap-2 rounded-md px-1 py-1", collapsed && "justify-center px-0")}>
@@ -135,7 +137,7 @@ export function Sidebar() {
           {!collapsed && (
             <div className="min-w-0 max-[1100px]:hidden">
               <div className="truncate text-xs font-medium leading-4">{CURRENT_USER.name}</div>
-              <div className="truncate text-[11px] leading-4 text-muted-foreground">{CURRENT_USER.role}</div>
+              <div className="truncate text-[11px] leading-4 text-muted-foreground">{CURRENT_USER.role} · admin</div>
             </div>
           )}
         </div>

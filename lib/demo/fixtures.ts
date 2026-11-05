@@ -1,43 +1,72 @@
 /**
- * Enakt "Firm Brain" demo fixtures — Ashcombe Trust Company.
+ * Enakt PE demo fixtures — Calloway Hill Partners.
  * Every name, number, and date on screen comes from here. Nothing is fetched.
  * "Now" is pinned so relative timestamps are identical on every take.
+ * Synthetic firm, people and companies. Vendor names appear as plain text only.
  */
 
-export const NOW = new Date("2026-10-31T10:15:00-04:00")
+export const NOW = new Date("2026-11-04T10:15:00-05:00")
 
-export const FIRM = "ashcombe"
+export const FIRM = "calloway"
 export const BASE = `/${FIRM}`
 export const href = (path = "") => `${BASE}${path}`
 
 export const WORKSPACE = {
   slug: FIRM,
-  name: "Ashcombe Trust Company",
-  short: "Ashcombe",
+  name: "Calloway Hill Partners",
+  short: "Calloway Hill",
   others: [
-    { name: "Harbor Point Advisors", slug: "harbor-point" },
-    { name: "Lakeside Family Office", slug: "lakeside" },
+    { name: "Brightwater Capital", slug: "brightwater" },
+    { name: "Marlow Ridge Equity", slug: "marlow-ridge" },
   ],
 }
 
-export const BRAIN = { before: 38, after: 51, mergedBefore: 2, mergedAfter: 4, total: 12 }
+export const FUND = { name: "Fund III", size: "$850M", people: 35, focus: "mid-market" }
 
-export const MODEL = { name: "Llama 3.3 70B", host: "gpu-02", rack: "rack B2", embed: "bge-m3 (local)" }
+/** "Firm AI-ready" meter. 22% at start, 34% once CR-7 merges and the first agent is live. */
+export const METER = { before: 22, after: 34, total: 12 }
+
+export const MODEL = {
+  name: "Claude via Azure",
+  short: "Claude",
+  tenant: "Calloway Hill tenant",
+  region: "West US 2",
+  note: "no training",
+  localEndpoint: "Local model endpoint",
+}
 
 export const DEPLOYMENT = {
-  installedOn: "Oct 21, 2026",
-  installedAt: new Date("2026-10-21T09:00:00-04:00"),
-  sourceReviewed: "Oct 18, 2026",
-  reviewer: "Ashcombe security",
-  version: "enakt 1.8.2",
-  sso: "SAML · Ashcombe identity provider",
+  installedOn: "Oct 24, 2026",
+  installedAt: new Date("2026-10-24T09:00:00-04:00"),
+  installedBy: "Calloway Hill IT",
+  tenant: "Azure · Calloway Hill tenant",
+  region: "West US 2",
+  sso: "SSO via Entra ID",
+  version: "enakt 1.9.0",
+  day: 12,
+  totalDays: 30,
+  enaktAccounts: "none",
 }
+
+// ---------------------------------------------------------------------------
+// Deals
+// ---------------------------------------------------------------------------
+
+export type DealId = "atlas" | "birch"
+export type Deal = { id: DealId; code: string; name: string; company: string; sector: string; stage: string; ic?: string; nda: string; leadId: string }
+export const DEALS: Record<DealId, Deal> = {
+  atlas: { id: "atlas", code: "ATLAS", name: "Project Atlas", company: "Northline Mechanical", sector: "HVAC services", stage: "In diligence", ic: "Nov 20", nda: "Seller NDA · use limited to evaluating Atlas", leadId: "ellen" },
+  birch: { id: "birch", code: "BIRCH", name: "Project Birch", company: "Fairhaven Dental Partners", sector: "Dental services", stage: "In diligence", nda: "Separate seller NDA · use limited to evaluating Birch", leadId: "owen" },
+}
+
+export const PORTFOLIO = ["Harrow Logistics", "Pinecrest Veterinary", "Belmont Fire & Safety", "Oakline Packaging", "Sutter Home Health", "Granite Field Services"]
 
 // ---------------------------------------------------------------------------
 // People and agents
 // ---------------------------------------------------------------------------
 
 export type ActorKind = "person" | "agent" | "group"
+export type AgentStatus = "live" | "build" | "queued" | "blocked"
 export type Actor = {
   id: string
   name: string
@@ -45,570 +74,708 @@ export type Actor = {
   kind: ActorKind
   initials: string
   email?: string
-  /** Agents: who they act for. */
-  actsFor?: string
   /** Agents: a one-line purpose. */
   purpose?: string
+  /** Agents: where they are in the rollout. */
+  status?: AgentStatus
+  /** Agents: which request created them. */
+  requestId?: string
+  /** Agents: sources in scope (proposed or live). */
+  scope?: SourceId[]
+  /** Agents: who they act for. */
+  actsFor?: string
 }
 
 export const PEOPLE: Record<string, Actor> = {
-  dana: { id: "dana", name: "Dana Ruiz", role: "Head of Operations", kind: "person", initials: "DR", email: "dana.ruiz@ashcombetrust.com" },
-  marcus: { id: "marcus", name: "Marcus Lee", role: "Senior Advisor", kind: "person", initials: "ML", email: "marcus.lee@ashcombetrust.com" },
-  priya: { id: "priya", name: "Priya Nair", role: "Finance Controller", kind: "person", initials: "PN", email: "priya.nair@ashcombetrust.com" },
-  sam: { id: "sam", name: "Sam Ortiz", role: "Chief Compliance Officer", kind: "person", initials: "SO", email: "sam.ortiz@ashcombetrust.com" },
-  chris: { id: "chris", name: "Chris Hale", role: "COO", kind: "person", initials: "CH", email: "chris.hale@ashcombetrust.com" },
-  planning: { id: "planning", name: "Planning team", role: "4 planners", kind: "group", initials: "PT" },
+  dana: { id: "dana", name: "Dana Ruiz", role: "Head of Operations", kind: "person", initials: "DR", email: "dana.ruiz@callowayhill.com" },
+  ellen: { id: "ellen", name: "Ellen Marsh", role: "Partner · Atlas lead", kind: "person", initials: "EM", email: "ellen.marsh@callowayhill.com" },
+  tom: { id: "tom", name: "Tom Becker", role: "Vice President · Atlas", kind: "person", initials: "TB", email: "tom.becker@callowayhill.com" },
+  nina: { id: "nina", name: "Nina Alvarez", role: "Associate · Atlas", kind: "person", initials: "NA", email: "nina.alvarez@callowayhill.com" },
+  owen: { id: "owen", name: "Owen Pratt", role: "Partner · Birch lead", kind: "person", initials: "OP", email: "owen.pratt@callowayhill.com" },
+  grace: { id: "grace", name: "Grace Liu", role: "CFO & Chief Compliance Officer", kind: "person", initials: "GL", email: "grace.liu@callowayhill.com" },
+  "atlas-team": { id: "atlas-team", name: "Atlas deal team", role: "Ellen, Tom, Nina", kind: "group", initials: "AT" },
 }
 
 export const AGENTS: Record<string, Actor> = {
-  "marcus-assistant": { id: "marcus-assistant", name: "marcus-assistant", role: "Advisor assistant", kind: "agent", initials: "MA", actsFor: "marcus", purpose: "Prepares client reviews for Marcus Lee from his own book." },
-  "ops-assistant": { id: "ops-assistant", name: "ops-assistant", role: "Operations assistant", kind: "agent", initials: "OA", actsFor: "dana", purpose: "Answers operations questions and drafts onboarding checklists." },
-  "merge-agent": { id: "merge-agent", name: "merge-agent", role: "Merge agent", kind: "agent", initials: "MG", purpose: "Proposes merges of ready sources into the firm brain. Never approves." },
-  "compliance-reviewer": { id: "compliance-reviewer", name: "compliance-reviewer", role: "Compliance reviewer", kind: "agent", initials: "CR", actsFor: "sam", purpose: "Flags compliance log entries that need a human look." },
-  "intake-agent": { id: "intake-agent", name: "intake-agent", role: "Intake agent", kind: "agent", initials: "IA", purpose: "Runs interviews and maps sources from metadata only." },
+  "atlas-memo-agent": {
+    id: "atlas-memo-agent",
+    name: "atlas-memo-agent",
+    role: "IC memo drafter",
+    kind: "agent",
+    initials: "AM",
+    purpose: "Drafts the financial section of the Atlas IC memo from the data room, the model and the deal record. Returns drafts for review.",
+    status: "build",
+    requestId: "r-3",
+    scope: ["atlas-dataroom", "atlas-model-v7", "deal-records", "ic-template"],
+    actsFor: "ellen",
+  },
+  "connect-agent": {
+    id: "connect-agent",
+    name: "connect-agent",
+    role: "Connection agent",
+    kind: "agent",
+    initials: "CN",
+    purpose: "Scans metadata, drafts scope plans and opens connection requests. Never approves, never reads rows.",
+    status: "live",
+    scope: [],
+  },
+  "portfolio-kpi-agent": {
+    id: "portfolio-kpi-agent",
+    name: "portfolio-kpi-agent",
+    role: "Portfolio KPI roll-up",
+    kind: "agent",
+    initials: "PK",
+    purpose: "Would read the six KPI packs and the board decks to draft the monthly portfolio summary.",
+    status: "queued",
+    requestId: "r-4",
+    scope: ["kpi-pack", "board-decks"],
+    actsFor: "grace",
+  },
+  "lp-letter-agent": {
+    id: "lp-letter-agent",
+    name: "lp-letter-agent",
+    role: "LP letter drafter",
+    kind: "agent",
+    initials: "LP",
+    purpose: "Would draft quarterly LP letters. Needs the LP database, which is red until the CCO decides.",
+    status: "blocked",
+    requestId: "r-5",
+    scope: ["lp-database", "board-decks"],
+    actsFor: "owen",
+  },
 }
+
+export const AGENT_ORDER = ["atlas-memo-agent", "connect-agent", "portfolio-kpi-agent", "lp-letter-agent"]
+
+export const AGENT_STATUS_LABEL: Record<AgentStatus, string> = { live: "Live", build: "In build", queued: "Queued", blocked: "Blocked" }
 
 export const ACTORS: Record<string, Actor> = Object.fromEntries([...Object.values(PEOPLE), ...Object.values(AGENTS)].map((a) => [a.id, a]))
 
 export const CURRENT_USER = PEOPLE.dana
 
 // ---------------------------------------------------------------------------
-// Sources
+// Lanes and sources
 // ---------------------------------------------------------------------------
 
-export type SourceType = "salesforce" | "sharepoint" | "fileshare" | "excel" | "custodian" | "sqlserver" | "oracle" | "postgres" | "access"
-export type Verdict = "unchecked" | "inbrain" | "ready" | "cleaning" | "conflict" | "stale" | "unverified" | "restricted"
+export type LaneId = "atlas" | "birch" | "portfolio" | "fundops" | "firmwide"
+export type Lane = { id: LaneId; label: string; sub: string; order: number; dealId?: DealId }
+export const LANES: Lane[] = [
+  { id: "atlas", label: "Project Atlas", sub: "Northline Mechanical · in diligence", order: 0, dealId: "atlas" },
+  { id: "birch", label: "Project Birch", sub: "Fairhaven Dental Partners · separate NDA", order: 1, dealId: "birch" },
+  { id: "portfolio", label: "Portfolio", sub: "6 companies", order: 2 },
+  { id: "fundops", label: "Fund ops", sub: "LP and fund-level data", order: 3 },
+  { id: "firmwide", label: "Firm-wide", sub: "Shared systems, row-filtered by deal", order: 4 },
+]
+export const LANE_BY_ID = Object.fromEntries(LANES.map((l) => [l.id, l])) as Record<LaneId, Lane>
 
+export type SourceType = "datasite" | "sharepoint" | "dealcloud" | "excel" | "fundadmin" | "outlook"
+export const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
+  datasite: "Datasite",
+  sharepoint: "SharePoint",
+  dealcloud: "DealCloud",
+  excel: "Excel",
+  fundadmin: "Fund admin portal",
+  outlook: "Outlook",
+}
+
+export type Verdict = "unchecked" | "ready" | "attention" | "conflict" | "restricted"
 export const VERDICT_LABEL: Record<Verdict, string> = {
-  unchecked: "Not checked yet",
-  inbrain: "In brain",
+  unchecked: "Not scanned",
   ready: "Ready",
-  cleaning: "Cleaning",
+  attention: "Needs work",
   conflict: "Conflict",
-  stale: "Stale",
-  unverified: "Unverified",
   restricted: "Restricted",
 }
-
-/** Urgency order for the Build table. */
-export const VERDICT_URGENCY: Record<Verdict, number> = {
-  conflict: 0,
-  stale: 1,
-  unverified: 2,
-  cleaning: 3,
-  ready: 4,
-  restricted: 5,
-  inbrain: 6,
-  unchecked: 7,
-}
-
-export const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
-  salesforce: "Salesforce",
-  sharepoint: "SharePoint list",
-  fileshare: "File share",
-  excel: "Excel",
-  custodian: "Custodian SFTP",
-  sqlserver: "SQL Server",
-  oracle: "Oracle",
-  postgres: "Postgres",
-  access: "Access database",
-}
+/** Readiness table order: red-conflict → yellow → green → red-policy. */
+export const VERDICT_URGENCY: Record<Verdict, number> = { conflict: 0, attention: 1, ready: 2, restricted: 3, unchecked: 4 }
+/** Green / yellow / red for the canvas edge strip. */
+export const VERDICT_TONE: Record<Verdict, "green" | "yellow" | "red" | "none"> = { ready: "green", attention: "yellow", conflict: "red", restricted: "red", unchecked: "none" }
 
 export type SourceId =
-  | "salesforce-crm"
-  | "onboarding"
-  | "client-docs"
-  | "client-tracker"
-  | "prospects"
-  | "custodian-feed"
-  | "aum-rollup"
-  | "billing"
-  | "kyc"
-  | "compliance-log"
-  | "advisor-comp"
-  | "planning-cases"
+  | "atlas-dataroom"
+  | "atlas-model-v7"
+  | "atlas-model-v6"
+  | "birch-dataroom"
+  | "birch-model"
+  | "deal-records"
+  | "ic-template"
+  | "kpi-pack"
+  | "board-decks"
+  | "lp-database"
+  | "fee-carry"
+  | "deal-email"
 
 export type Task = { text: string; assignee: string; due: string }
 
 export type Source = {
   id: SourceId
+  n: number
   name: string
   type: SourceType
-  /** Final verdict after the readiness pass. */
+  lane: LaneId
+  slot: number
   verdict: Verdict
-  ownerId: string | null
+  ownerId: string
   records: number
   recordNoun: string
-  cadence: string
-  lastEdit: Date
+  lastSync: Date
   location: string
-  feeds: string[]
   reason: string
-  /** Next step shown on Build. Null when nothing is needed. */
   task: Task | null
-  /** Canvas position. */
-  pos: { x: number; y: number }
-  /** Which resource column on the permissions matrix this source belongs to. */
-  resource: ResourceId | null
+  /** Where access is enforced for this source. */
+  enforcement: string
+  /** Which permissions column this source belongs to. */
+  resource: ResourceId
 }
+
+const SYNC = (h: number, m: number) => new Date(`2026-11-04T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00-05:00`)
 
 export const SOURCES: Source[] = [
   {
-    id: "salesforce-crm",
-    name: "Salesforce CRM",
-    type: "salesforce",
+    id: "atlas-dataroom",
+    n: 1,
+    name: "Atlas data room",
+    type: "datasite",
+    lane: "atlas",
+    slot: 0,
     verdict: "conflict",
-    ownerId: "dana",
+    ownerId: "tom",
     records: 1284,
-    recordNoun: "households",
-    cadence: "Continuous",
-    lastEdit: new Date("2026-10-29T14:12:00-04:00"),
-    location: "ashcombe.my.salesforce.com · Household__c",
-    feeds: ["Client_Tracker_FINAL_v3", "Client review prep"],
-    reason: "Patel household AUM disagrees with AUM_Rollup row 214. Held out of the brain until an owner picks a value.",
-    task: { text: "Resolve Patel household AUM with Priya Nair", assignee: "dana", due: "Nov 3" },
-    pos: { x: 270, y: 30 },
-    resource: "client-records",
-  },
-  {
-    id: "onboarding",
-    name: "Onboarding (SharePoint)",
-    type: "sharepoint",
-    verdict: "ready",
-    ownerId: "dana",
-    records: 37,
-    recordNoun: "open items",
-    cadence: "Daily",
-    lastEdit: new Date("2026-10-30T17:40:00-04:00"),
-    location: "sharepoint/sites/ops/Lists/Onboarding",
-    feeds: ["Salesforce CRM"],
-    reason: "Owner confirmed. Every item maps to a Salesforce household ID. Included in MR-14.",
-    task: { text: "Approve MR-14", assignee: "dana", due: "Oct 31" },
-    pos: { x: 20, y: 30 },
-    resource: "client-records",
-  },
-  {
-    id: "client-docs",
-    name: "Client documents (file share)",
-    type: "fileshare",
-    verdict: "cleaning",
-    ownerId: "dana",
-    records: 18406,
     recordNoun: "files",
-    cadence: "Continuous",
-    lastEdit: new Date("2026-10-30T11:05:00-04:00"),
-    location: "\\\\ash-fs01\\Clients",
-    feeds: ["Client review prep"],
-    reason: "2,113 files have no household ID in their path. Operations is tagging them; merge follows.",
-    task: { text: "Tag 2,113 files with household IDs", assignee: "dana", due: "Nov 12" },
-    pos: { x: 20, y: 130 },
-    resource: "client-documents",
+    lastSync: SYNC(10, 11),
+    location: "datasite://atlas/**",
+    reason: "1,284 files indexed, folder IDs stable. TTM revenue in the CIM ($48.2M, p.14) disagrees with the monthly P&L ($46.9M, F42). Held, both values kept with sources.",
+    task: { text: "Resolve TTM revenue: CIM p.14 vs Monthly P&L F42", assignee: "nina", due: "Nov 12" },
+    enforcement: "Datasite group membership · atlas-deal-team",
+    resource: "atlas",
   },
   {
-    id: "client-tracker",
-    name: "Client_Tracker_FINAL_v3",
-    type: "excel",
-    verdict: "stale",
-    ownerId: "marcus",
-    records: 212,
-    recordNoun: "rows",
-    cadence: "When Marcus remembers",
-    lastEdit: new Date("2026-08-14T18:22:00-04:00"),
-    location: "OneDrive/Marcus Lee/Client_Tracker_FINAL_v3.xlsx",
-    feeds: ["Client review prep"],
-    reason: "Last edited Aug 14. 41 rows disagree with Salesforce on contact or AUM.",
-    task: { text: "Confirm the 41 rows that differ from Salesforce", assignee: "marcus", due: "Nov 5" },
-    pos: { x: 270, y: 130 },
-    resource: "client-records",
-  },
-  {
-    id: "prospects",
-    name: "Prospects_2025.xlsx",
-    type: "excel",
-    verdict: "stale",
-    ownerId: "marcus",
-    records: 96,
-    recordNoun: "rows",
-    cadence: "Rarely",
-    lastEdit: new Date("2026-03-03T09:48:00-05:00"),
-    location: "OneDrive/Marcus Lee/Prospects_2025.xlsx",
-    feeds: [],
-    reason: "No edits since Mar 3. Marcus to mark which prospects are still live before anything merges.",
-    task: { text: "Mark which prospects are still live", assignee: "marcus", due: "Nov 7" },
-    pos: { x: 20, y: 230 },
-    resource: "client-records",
-  },
-  {
-    id: "custodian-feed",
-    name: "Custodian feed",
-    type: "custodian",
-    verdict: "inbrain",
-    ownerId: "priya",
-    records: 4117,
-    recordNoun: "positions nightly",
-    cadence: "Nightly 02:00",
-    lastEdit: new Date("2026-10-31T02:04:00-04:00"),
-    location: "sftp://custodian/ashcombe/positions_YYYYMMDD.csv",
-    feeds: ["AUM_Rollup.xlsx"],
-    reason: "Schema stable since 2024. Merged into the brain Oct 24.",
-    task: null,
-    pos: { x: 20, y: 380 },
-    resource: null,
-  },
-  {
-    id: "aum-rollup",
-    name: "AUM_Rollup.xlsx",
-    type: "excel",
-    verdict: "conflict",
-    ownerId: "priya",
-    records: 1284,
-    recordNoun: "rows",
-    cadence: "Monthly",
-    lastEdit: new Date("2026-09-30T19:10:00-04:00"),
-    location: "SharedDrive/Finance/AUM_Rollup.xlsx",
-    feeds: ["Billing (SQL Server)"],
-    reason: "Row 214 (Patel) differs from Salesforce by $24,500. Both values kept with their sources.",
-    task: { text: "Confirm row 214 against the custodian statement", assignee: "priya", due: "Nov 3" },
-    pos: { x: 270, y: 380 },
-    resource: null,
-  },
-  {
-    id: "billing",
-    name: "Billing (SQL Server)",
-    type: "sqlserver",
+    id: "atlas-model-v7",
+    n: 2,
+    name: "Atlas_Model_v7.xlsx",
+    type: "sharepoint",
+    lane: "atlas",
+    slot: 1,
     verdict: "ready",
-    ownerId: "priya",
-    records: 3902,
-    recordNoun: "invoices",
-    cadence: "Quarterly run",
-    lastEdit: new Date("2026-10-01T07:30:00-04:00"),
-    location: "ash-sql02 · billing.dbo.Invoices",
-    feeds: [],
-    reason: "Owner confirmed, schema documented. Reads AUM_Rollup at quarter end. Included in MR-14.",
-    task: { text: "Approve MR-14", assignee: "dana", due: "Oct 31" },
-    pos: { x: 520, y: 420 },
-    resource: null,
-  },
-  {
-    id: "kyc",
-    name: "KYC records",
-    type: "oracle",
-    verdict: "cleaning",
-    ownerId: "sam",
-    records: 1311,
-    recordNoun: "records",
-    cadence: "On client event",
-    lastEdit: new Date("2026-10-30T16:20:00-04:00"),
-    location: "ash-ora01 · KYC.CLIENT_VERIFICATION",
-    feeds: ["Compliance log"],
-    reason: "Restricted to compliance. 58 records are missing a refresh date; Sam's team is filling them.",
-    task: { text: "Add refresh dates to 58 records", assignee: "sam", due: "Nov 10" },
-    pos: { x: 770, y: 30 },
-    resource: "kyc-records",
-  },
-  {
-    id: "compliance-log",
-    name: "Compliance log",
-    type: "postgres",
-    verdict: "inbrain",
-    ownerId: "sam",
-    records: 22870,
-    recordNoun: "entries",
-    cadence: "Append-only",
-    lastEdit: new Date("2026-10-31T09:58:00-04:00"),
-    location: "ash-pg01 · compliance.events",
-    feeds: [],
-    reason: "Append-only, owner confirmed. Merged into the brain Oct 23.",
-    task: null,
-    pos: { x: 770, y: 130 },
-    resource: "compliance-log",
-  },
-  {
-    id: "advisor-comp",
-    name: "Advisor_Comp.xlsx",
-    type: "excel",
-    verdict: "restricted",
-    ownerId: "chris",
+    ownerId: "nina",
     records: 14,
-    recordNoun: "rows",
-    cadence: "Quarterly",
-    lastEdit: new Date("2026-10-06T12:00:00-04:00"),
-    location: "SharedDrive/Leadership/Advisor_Comp.xlsx",
-    feeds: [],
-    reason: "Leadership only by policy. No agent may read it. Never scanned, never merged.",
+    recordNoun: "tabs",
+    lastSync: SYNC(10, 9),
+    location: "sharepoint://deals/atlas/Atlas_Model_v7.xlsx",
+    reason: "Current model, confirmed by Nina Alvarez in clarification 1.",
     task: null,
-    pos: { x: 770, y: 270 },
-    resource: "advisor-compensation",
+    enforcement: "SharePoint site permission · deals/atlas",
+    resource: "atlas",
   },
   {
-    id: "planning-cases",
-    name: "Planning cases (Access database)",
-    type: "access",
-    verdict: "unverified",
-    ownerId: null,
-    records: 340,
-    recordNoun: "cases",
-    cadence: "Unknown",
-    lastEdit: new Date("2026-10-27T15:44:00-04:00"),
-    location: "\\\\ash-fs01\\Planning\\Cases.accdb",
-    feeds: [],
-    reason: "No owner responded after 2 reminders. Open question for Chris Hale.",
-    task: { text: "Name an owner for the planning database", assignee: "chris", due: "Nov 4" },
-    pos: { x: 770, y: 420 },
-    resource: null,
+    id: "atlas-model-v6",
+    n: 3,
+    name: "Atlas_Model_v6.xlsx",
+    type: "sharepoint",
+    lane: "atlas",
+    slot: 2,
+    verdict: "attention",
+    ownerId: "nina",
+    records: 13,
+    recordNoun: "tabs",
+    lastSync: SYNC(10, 9),
+    location: "sharepoint://deals/atlas/archive/Atlas_Model_v6.xlsx",
+    reason: "Superseded by v7 but still linked from the memo draft. Out of scope until the link is retired.",
+    task: { text: "Retire the v6 link in the memo draft", assignee: "nina", due: "Nov 8" },
+    enforcement: "SharePoint site permission · deals/atlas",
+    resource: "atlas",
+  },
+  {
+    id: "birch-dataroom",
+    n: 4,
+    name: "Birch data room",
+    type: "datasite",
+    lane: "birch",
+    slot: 0,
+    verdict: "restricted",
+    ownerId: "owen",
+    records: 912,
+    recordNoun: "files",
+    lastSync: SYNC(10, 11),
+    location: "datasite://birch/**",
+    reason: "Birch NDA: use limited to evaluating Birch. No agent outside the Birch team may read it.",
+    task: null,
+    enforcement: "Datasite group membership · birch-deal-team",
+    resource: "birch",
+  },
+  {
+    id: "birch-model",
+    n: 5,
+    name: "Birch_Model.xlsx",
+    type: "sharepoint",
+    lane: "birch",
+    slot: 1,
+    verdict: "restricted",
+    ownerId: "owen",
+    records: 11,
+    recordNoun: "tabs",
+    lastSync: SYNC(10, 9),
+    location: "sharepoint://deals/birch/Birch_Model.xlsx",
+    reason: "Birch team only. Covered by the same NDA as the data room.",
+    task: null,
+    enforcement: "SharePoint site permission · deals/birch",
+    resource: "birch",
+  },
+  {
+    id: "deal-records",
+    n: 6,
+    name: "Deal records",
+    type: "dealcloud",
+    lane: "firmwide",
+    slot: 0,
+    verdict: "ready",
+    ownerId: "dana",
+    records: 214,
+    recordNoun: "deals",
+    lastSync: SYNC(10, 4),
+    location: "dealcloud.deals",
+    reason: "Row filter by deal available. atlas-memo-agent sees WHERE deal_id = 'ATLAS' and nothing else.",
+    task: null,
+    enforcement: "DealCloud row filter · deal_id = 'ATLAS'",
+    resource: "atlas",
+  },
+  {
+    id: "ic-template",
+    n: 7,
+    name: "IC memo template",
+    type: "sharepoint",
+    lane: "firmwide",
+    slot: 1,
+    verdict: "ready",
+    ownerId: "dana",
+    records: 1,
+    recordNoun: "template · v4",
+    lastSync: SYNC(10, 9),
+    location: "sharepoint://templates/ic-memo-v4.docx",
+    reason: "Template v4, used since 2024. Read-only for every agent.",
+    task: null,
+    enforcement: "SharePoint site permission · templates (read)",
+    resource: "atlas",
+  },
+  {
+    id: "kpi-pack",
+    n: 8,
+    name: "Portfolio KPI pack",
+    type: "excel",
+    lane: "portfolio",
+    slot: 0,
+    verdict: "attention",
+    ownerId: "grace",
+    records: 6,
+    recordNoun: "workbooks",
+    lastSync: SYNC(9, 10),
+    location: "sharepoint://portfolio/kpi/*.xlsx",
+    reason: "6 formats, 2 missing September. portfolio-kpi-agent waits until the packs line up.",
+    task: { text: "Collect September packs from 2 companies", assignee: "grace", due: "Nov 14" },
+    enforcement: "SharePoint site permission · portfolio",
+    resource: "portfolio",
+  },
+  {
+    id: "board-decks",
+    n: 9,
+    name: "Board decks",
+    type: "sharepoint",
+    lane: "portfolio",
+    slot: 1,
+    verdict: "ready",
+    ownerId: "grace",
+    records: 48,
+    recordNoun: "decks",
+    lastSync: SYNC(10, 9),
+    location: "sharepoint://portfolio/board/**",
+    reason: "Quarterly, consistent naming. Ready for a scoped read once an agent is approved.",
+    task: null,
+    enforcement: "SharePoint site permission · portfolio",
+    resource: "portfolio",
+  },
+  {
+    id: "lp-database",
+    n: 10,
+    name: "LP database",
+    type: "fundadmin",
+    lane: "fundops",
+    slot: 0,
+    verdict: "restricted",
+    ownerId: "grace",
+    records: 212,
+    recordNoun: "LPs",
+    lastSync: new Date("2026-11-03T18:00:00-05:00"),
+    location: "fundadmin://calloway/fund-iii/lps",
+    reason: "LP confidential. CCO approval required before any agent reads it. lp-letter-agent is waiting on that decision.",
+    task: { text: "Decide the lp-letter-agent request", assignee: "grace", due: "Nov 7" },
+    enforcement: "Fund admin portal role · CCO only",
+    resource: "lp",
+  },
+  {
+    id: "fee-carry",
+    n: 11,
+    name: "Fee & carry calc",
+    type: "excel",
+    lane: "fundops",
+    slot: 1,
+    verdict: "restricted",
+    ownerId: "grace",
+    records: 3,
+    recordNoun: "workbooks",
+    lastSync: new Date("2026-10-31T17:30:00-04:00"),
+    location: "sharepoint://leadership/fund-iii/Fee_Carry.xlsx",
+    reason: "Leadership only, no agents. Never scanned past the file name.",
+    task: null,
+    enforcement: "SharePoint site permission · leadership (no agents)",
+    resource: "fee",
+  },
+  {
+    id: "deal-email",
+    n: 12,
+    name: "Deal-team email",
+    type: "outlook",
+    lane: "firmwide",
+    slot: 2,
+    verdict: "attention",
+    ownerId: "dana",
+    records: 18240,
+    recordNoun: "messages (metadata)",
+    lastSync: new Date("2026-11-03T22:00:00-05:00"),
+    location: "outlook://groups/deal-teams",
+    reason: "Metadata only, not connected. No agent has requested it.",
+    task: { text: "Decide whether to connect Outlook metadata", assignee: "dana", due: "Nov 18" },
+    enforcement: "Not connected",
+    resource: "atlas",
   },
 ]
 
 export const SOURCE_BY_ID: Record<SourceId, Source> = Object.fromEntries(SOURCES.map((s) => [s.id, s])) as Record<SourceId, Source>
-
-export const BRAIN_POS = { x: 520, y: 200 }
-
-export type GraphEdge = { id: string; source: string; target: string; kind: "dep" | "brain" }
-
-/** Dependency edges between sources. Brain edges are added as sources merge. */
-export const DEP_EDGES: GraphEdge[] = [
-  { id: "onboarding>salesforce-crm", source: "onboarding", target: "salesforce-crm", kind: "dep" },
-  { id: "salesforce-crm>client-tracker", source: "salesforce-crm", target: "client-tracker", kind: "dep" },
-  { id: "custodian-feed>aum-rollup", source: "custodian-feed", target: "aum-rollup", kind: "dep" },
-  { id: "aum-rollup>billing", source: "aum-rollup", target: "billing", kind: "dep" },
-]
-
-export const brainEdge = (id: SourceId): GraphEdge => ({ id: `${id}>brain`, source: id, target: "brain", kind: "brain" })
-
-/** Sources already in the brain before any merge. */
-export const IN_BRAIN_BEFORE: SourceId[] = ["custodian-feed", "compliance-log"]
-/** Sources MR-14 brings in. */
-export const MR14_SOURCES: SourceId[] = ["onboarding", "billing"]
+export const sourcesInLane = (lane: LaneId) => SOURCES.filter((s) => s.lane === lane).sort((a, b) => a.slot - b.slot)
 
 // ---------------------------------------------------------------------------
-// Workflows, policies, open questions
+// Canvas geometry
 // ---------------------------------------------------------------------------
 
-export type Workflow = { id: string; name: string; ownerId: string; sources: SourceId[] }
-export const WORKFLOWS: Workflow[] = [
-  { id: "onboarding", name: "Client onboarding", ownerId: "dana", sources: ["onboarding", "salesforce-crm", "client-docs"] },
-  { id: "review-prep", name: "Client review prep", ownerId: "marcus", sources: ["salesforce-crm", "client-tracker", "client-docs"] },
-  { id: "aum-rollup", name: "Monthly AUM rollup", ownerId: "priya", sources: ["custodian-feed", "aum-rollup"] },
-  { id: "billing-run", name: "Billing run", ownerId: "priya", sources: ["aum-rollup", "billing"] },
+export const LAYOUT = {
+  nodeW: 212,
+  nodeH: 70,
+  laneW: 692,
+  laneH: 124,
+  laneGap: 18,
+  padX: 16,
+  nodeY: 40,
+  slotGap: 12,
+  agentX: 760,
+}
+
+export const lanePos = (lane: LaneId) => ({ x: 0, y: LANE_BY_ID[lane].order * (LAYOUT.laneH + LAYOUT.laneGap) })
+export const slotPos = (slot: number) => ({ x: LAYOUT.padX + slot * (LAYOUT.nodeW + LAYOUT.slotGap), y: LAYOUT.nodeY })
+export const sourceAbsPos = (id: SourceId) => {
+  const s = SOURCE_BY_ID[id]
+  const l = lanePos(s.lane)
+  const p = slotPos(s.slot)
+  return { x: l.x + p.x, y: l.y + p.y }
+}
+export const AGENT_LANE: Record<string, LaneId> = { "atlas-memo-agent": "atlas", "portfolio-kpi-agent": "portfolio", "lp-letter-agent": "fundops", "connect-agent": "firmwide" }
+export const agentPos = (id: string) => ({ x: LAYOUT.agentX, y: lanePos(AGENT_LANE[id]).y + (LAYOUT.laneH - LAYOUT.nodeH) / 2 })
+
+export type EdgeKind = "scope" | "requested" | "blocked" | "dep"
+export type GraphEdge = { id: string; source: string; target: string; kind: EdgeKind; label?: string }
+
+export const EDGES: GraphEdge[] = [
+  { id: "atlas-memo-agent>atlas-dataroom", source: "atlas-memo-agent", target: "atlas-dataroom", kind: "scope" },
+  { id: "atlas-memo-agent>atlas-model-v7", source: "atlas-memo-agent", target: "atlas-model-v7", kind: "scope" },
+  { id: "atlas-memo-agent>deal-records", source: "atlas-memo-agent", target: "deal-records", kind: "scope" },
+  { id: "atlas-memo-agent>ic-template", source: "atlas-memo-agent", target: "ic-template", kind: "scope" },
+  { id: "portfolio-kpi-agent>kpi-pack", source: "portfolio-kpi-agent", target: "kpi-pack", kind: "requested" },
+  { id: "portfolio-kpi-agent>board-decks", source: "portfolio-kpi-agent", target: "board-decks", kind: "requested" },
+  { id: "lp-letter-agent>lp-database", source: "lp-letter-agent", target: "lp-database", kind: "blocked" },
+  { id: "atlas-model-v6>atlas-model-v7", source: "atlas-model-v6", target: "atlas-model-v7", kind: "dep", label: "superseded by" },
 ]
-export const WORKFLOW_BY_ID = Object.fromEntries(WORKFLOWS.map((w) => [w.id, w])) as Record<string, Workflow>
+export const EDGE_BY_ID = Object.fromEntries(EDGES.map((e) => [e.id, e])) as Record<string, GraphEdge>
+
+// ---------------------------------------------------------------------------
+// Policies
+// ---------------------------------------------------------------------------
 
 export type Policy = {
   id: string
   rule: string
-  /** Who said it and when. */
   sourceId: string
   sourceLabel: string
   date: string
-  fromIntake: boolean
+  fromClarification: boolean
   /** Transcript entry id this came from. */
   transcriptId?: string
-  /** Nodes it governs on the canvas. */
-  governs: string[]
+  governsLanes: LaneId[]
+  governsSources: SourceId[]
 }
 
 export const POLICIES: Policy[] = [
   {
-    id: "advisor-scope",
-    rule: "Advisor assistants see only their advisor's households",
-    sourceId: "marcus",
-    sourceLabel: "Marcus Lee · interview",
+    id: "deal-data-within-deal",
+    rule: "Deal data is used only within its deal",
+    sourceId: "tom",
+    sourceLabel: "Tom Becker · clarification 2",
     date: "Oct 31",
-    fromIntake: true,
-    transcriptId: "b3-a",
-    governs: ["brain", "client-tracker"],
+    fromClarification: true,
+    transcriptId: "b2-a",
+    governsLanes: ["atlas", "birch"],
+    governsSources: ["atlas-dataroom", "atlas-model-v7", "atlas-model-v6", "birch-dataroom", "birch-model"],
   },
   {
-    id: "kyc-compliance",
-    rule: "Only compliance reads KYC records, people or agents",
-    sourceId: "sam",
-    sourceLabel: "Sam Ortiz · interview",
+    id: "birch-nda",
+    rule: "Birch materials: use limited to evaluating Birch",
+    sourceId: "tom",
+    sourceLabel: "Tom Becker · clarification 2",
     date: "Oct 31",
-    fromIntake: true,
-    transcriptId: "b5-a",
-    governs: ["kyc"],
+    fromClarification: true,
+    transcriptId: "b2-a",
+    governsLanes: ["birch"],
+    governsSources: ["birch-dataroom", "birch-model"],
   },
   {
-    id: "comp-leadership",
-    rule: "Advisor compensation is leadership only, no agents",
-    sourceId: "chris",
-    sourceLabel: "Chris Hale · interview",
-    date: "Oct 31",
-    fromIntake: true,
-    transcriptId: "b6-a",
-    governs: ["advisor-comp"],
+    id: "lp-cco",
+    rule: "LP data needs CCO approval before any agent reads it",
+    sourceId: "grace",
+    sourceLabel: "Grace Liu · kickoff",
+    date: "Oct 28",
+    fromClarification: false,
+    governsLanes: ["fundops"],
+    governsSources: ["lp-database"],
   },
   {
-    id: "no-egress",
-    rule: "No firm data leaves the Ashcombe network",
-    sourceId: "deployment",
-    sourceLabel: "Deployment policy · Ashcombe security",
-    date: "Oct 21",
-    fromIntake: false,
-    governs: [],
+    id: "fee-carry-leadership",
+    rule: "Fee & carry is leadership only, no agents",
+    sourceId: "grace",
+    sourceLabel: "Grace Liu · kickoff",
+    date: "Oct 28",
+    fromClarification: false,
+    governsLanes: ["fundops"],
+    governsSources: ["fee-carry"],
   },
   {
-    id: "agents-propose",
-    rule: "Agents propose; a person approves every merge",
+    id: "two-approvals",
+    rule: "Agents propose connections; the deal partner and the CCO approve",
     sourceId: "dana",
     sourceLabel: "Dana Ruiz · kickoff",
-    date: "Oct 22",
-    fromIntake: false,
-    governs: ["brain"],
+    date: "Oct 27",
+    fromClarification: false,
+    governsLanes: [],
+    governsSources: [],
   },
   {
-    id: "traced-values",
-    rule: "Every value in the brain traces to a source row",
-    sourceId: "sam",
-    sourceLabel: "Sam Ortiz · kickoff",
-    date: "Oct 22",
-    fromIntake: false,
-    governs: ["brain"],
+    id: "traced-facts",
+    rule: "Every fact an agent uses traces to a file and a location",
+    sourceId: "ellen",
+    sourceLabel: "Ellen Marsh · request R-3",
+    date: "Oct 26",
+    fromClarification: false,
+    governsLanes: [],
+    governsSources: [],
   },
 ]
 export const POLICY_BY_ID = Object.fromEntries(POLICIES.map((p) => [p.id, p])) as Record<string, Policy>
 
+export type AgentPolicy = { readable: string; code: string[]; enforcement: string[]; ruleIds: string[] }
+export const AGENT_POLICY: Record<string, AgentPolicy> = {
+  "atlas-memo-agent": {
+    readable: "Reads Project Atlas only. Never writes. Drafts go to the deal team.",
+    code: [
+      "agent: atlas-memo-agent",
+      "read: datasite://atlas/**        (group: atlas-deal-team)",
+      "read: sharepoint://deals/atlas/Atlas_Model_v7.xlsx",
+      "read: dealcloud.deals WHERE deal_id = 'ATLAS'",
+      "read: sharepoint://templates/ic-memo-v4.docx",
+      "write: none (drafts returned for review)",
+      "deny: datasite://birch/**          (policy: birch-nda)",
+      "deny: fundadmin://**               (policy: lp-cco)",
+    ],
+    enforcement: ["Datasite group membership", "SharePoint site permission", "DealCloud row filter", "Model gateway denies tools outside scope"],
+    ruleIds: ["deal-data-within-deal", "traced-facts"],
+  },
+  "connect-agent": {
+    readable: "Reads schemas and metadata only. Opens connection requests. Cannot approve, cannot read rows.",
+    code: ["agent: connect-agent", "read: metadata://**", "write: connection-requests (draft)", "approve: none", "deny: rows://**"],
+    enforcement: ["Metadata-only API tokens", "Model gateway denies row-level tools", "Two approvals required on every request"],
+    ruleIds: ["two-approvals"],
+  },
+  "portfolio-kpi-agent": {
+    readable: "Requested. Would read the Portfolio lane only. Waiting on KPI cleanup before a connection request opens.",
+    code: ["agent: portfolio-kpi-agent", "status: queued (R-4)", "proposed read: sharepoint://portfolio/kpi/*.xlsx", "proposed read: sharepoint://portfolio/board/**", "write: none"],
+    enforcement: ["SharePoint site permission (proposed)", "Model gateway denies tools until a request merges"],
+    ruleIds: ["two-approvals", "traced-facts"],
+  },
+  "lp-letter-agent": {
+    readable: "Requested. Needs the LP database, which is red. Blocked until Grace Liu decides.",
+    code: ["agent: lp-letter-agent", "status: blocked (R-5)", "requested read: fundadmin://calloway/fund-iii/lps   # red: lp-cco", "requested read: sharepoint://portfolio/board/**", "write: none"],
+    enforcement: ["Fund admin portal role · CCO only", "Model gateway denies tools until a request merges"],
+    ruleIds: ["lp-cco", "two-approvals"],
+  },
+}
+
 export type OpenQuestion = { id: string; text: string; routedTo: string }
 export const OPEN_QUESTIONS: Record<string, OpenQuestion> = {
-  "marcus-tracker": { id: "marcus-tracker", text: "Marcus's tracker: where is it and what is in it?", routedTo: "marcus" },
-  "planning-owner": { id: "planning-owner", text: "Planning cases database needs an owner", routedTo: "chris" },
+  "ttm-revenue": { id: "ttm-revenue", text: "TTM revenue: CIM says $48.2M, monthly P&L says $46.9M", routedTo: "nina" },
 }
 
 // ---------------------------------------------------------------------------
 // Permissions matrix
 // ---------------------------------------------------------------------------
 
-export type ResourceId = "client-records" | "client-documents" | "kyc-records" | "advisor-compensation" | "compliance-log"
-export const RESOURCES: { id: ResourceId; label: string; sources: SourceId[] }[] = [
-  { id: "client-records", label: "Client records", sources: ["salesforce-crm", "onboarding", "client-tracker", "prospects"] },
-  { id: "client-documents", label: "Client documents", sources: ["client-docs"] },
-  { id: "kyc-records", label: "KYC records", sources: ["kyc"] },
-  { id: "advisor-compensation", label: "Advisor compensation", sources: ["advisor-comp"] },
-  { id: "compliance-log", label: "Compliance log", sources: ["compliance-log"] },
+export type ResourceId = "atlas" | "birch" | "portfolio" | "lp" | "fee"
+export const RESOURCES: { id: ResourceId; label: string }[] = [
+  { id: "atlas", label: "Atlas" },
+  { id: "birch", label: "Birch" },
+  { id: "portfolio", label: "Portfolio" },
+  { id: "lp", label: "LP data" },
+  { id: "fee", label: "Fee & carry" },
 ]
 
 export type AccessLevel = "none" | "read" | "own" | "propose" | "approve"
-export const ACCESS_LABEL: Record<AccessLevel, string> = {
-  none: "No access",
-  read: "Read",
-  own: "Own clients",
-  propose: "Propose",
-  approve: "Approve",
-}
+export const ACCESS_LABEL: Record<AccessLevel, string> = { none: "No access", read: "Read", own: "Own deal", propose: "Propose", approve: "Approve" }
 export const ACCESS_ORDER: AccessLevel[] = ["none", "read", "own", "propose", "approve"]
 
-export const MATRIX_PEOPLE = ["dana", "marcus", "sam", "chris"]
-export const MATRIX_AGENTS = ["marcus-assistant", "ops-assistant", "merge-agent", "compliance-reviewer"]
+export const MATRIX_PEOPLE = ["ellen", "tom", "nina", "owen", "grace", "dana"]
+export const MATRIX_AGENTS = AGENT_ORDER
 
 export type Matrix = Record<string, Record<ResourceId, AccessLevel>>
 
 export const INITIAL_MATRIX: Matrix = {
-  dana: { "client-records": "approve", "client-documents": "read", "kyc-records": "none", "advisor-compensation": "none", "compliance-log": "read" },
-  marcus: { "client-records": "own", "client-documents": "own", "kyc-records": "none", "advisor-compensation": "none", "compliance-log": "none" },
-  sam: { "client-records": "read", "client-documents": "read", "kyc-records": "approve", "advisor-compensation": "none", "compliance-log": "approve" },
-  chris: { "client-records": "read", "client-documents": "read", "kyc-records": "none", "advisor-compensation": "approve", "compliance-log": "read" },
-  "marcus-assistant": { "client-records": "own", "client-documents": "own", "kyc-records": "none", "advisor-compensation": "none", "compliance-log": "none" },
-  "ops-assistant": { "client-records": "read", "client-documents": "read", "kyc-records": "none", "advisor-compensation": "none", "compliance-log": "read" },
-  "merge-agent": { "client-records": "propose", "client-documents": "propose", "kyc-records": "none", "advisor-compensation": "none", "compliance-log": "none" },
-  "compliance-reviewer": { "client-records": "read", "client-documents": "none", "kyc-records": "read", "advisor-compensation": "none", "compliance-log": "propose" },
+  ellen: { atlas: "approve", birch: "none", portfolio: "read", lp: "read", fee: "read" },
+  tom: { atlas: "own", birch: "none", portfolio: "read", lp: "none", fee: "none" },
+  nina: { atlas: "own", birch: "none", portfolio: "read", lp: "none", fee: "none" },
+  owen: { atlas: "none", birch: "approve", portfolio: "read", lp: "read", fee: "read" },
+  grace: { atlas: "read", birch: "read", portfolio: "approve", lp: "approve", fee: "approve" },
+  dana: { atlas: "read", birch: "read", portfolio: "read", lp: "none", fee: "none" },
+  "atlas-memo-agent": { atlas: "read", birch: "none", portfolio: "none", lp: "none", fee: "none" },
+  "connect-agent": { atlas: "propose", birch: "propose", portfolio: "propose", lp: "none", fee: "none" },
+  "portfolio-kpi-agent": { atlas: "none", birch: "none", portfolio: "none", lp: "none", fee: "none" },
+  "lp-letter-agent": { atlas: "none", birch: "none", portfolio: "none", lp: "none", fee: "none" },
 }
 
 // ---------------------------------------------------------------------------
 // View-as scopes on the map
 // ---------------------------------------------------------------------------
 
-export type Viewer = "dana" | "marcus" | "marcus-assistant"
+export type Viewer = "dana" | "atlas-team" | "atlas-memo-agent"
 export const VIEWERS: { id: Viewer; label: string; sub: string }[] = [
-  { id: "dana", label: "Dana Ruiz", sub: "Head of Operations · sees all 12" },
-  { id: "marcus", label: "Marcus Lee", sub: "Senior Advisor · 6 sources" },
-  { id: "marcus-assistant", label: "marcus-assistant", sub: "Agent · 3 sources, scoped to Marcus's book" },
+  { id: "dana", label: "Dana Ruiz", sub: "admin · all 12 sources" },
+  { id: "atlas-team", label: "Atlas deal team", sub: "Atlas lane + firm-wide · 6 sources" },
+  { id: "atlas-memo-agent", label: "atlas-memo-agent", sub: "agent · 4 sources, Atlas only" },
 ]
 export const VIEW_SCOPE: Record<Viewer, SourceId[] | "all"> = {
   dana: "all",
-  marcus: ["salesforce-crm", "client-tracker", "prospects", "onboarding", "client-docs", "planning-cases"],
-  "marcus-assistant": ["salesforce-crm", "client-tracker", "client-docs"],
+  "atlas-team": ["atlas-dataroom", "atlas-model-v7", "atlas-model-v6", "deal-records", "ic-template", "deal-email"],
+  "atlas-memo-agent": ["atlas-dataroom", "atlas-model-v7", "deal-records", "ic-template"],
+}
+export const VIEW_AGENTS: Record<Viewer, string[] | "all"> = {
+  dana: "all",
+  "atlas-team": ["atlas-memo-agent", "connect-agent"],
+  "atlas-memo-agent": ["atlas-memo-agent"],
 }
 export const VIEW_BANNER: Record<Viewer, string | null> = {
   dana: null,
-  marcus: "Viewing as Marcus Lee · 6 of 12 sources. Marcus does not see the other 6 and does not know they exist here.",
-  "marcus-assistant": "Viewing as marcus-assistant · 3 sources, scoped to Marcus Lee's households by policy. Everything else is invisible to it.",
+  "atlas-team": "Viewing as the Atlas deal team · 6 of 12 sources. Birch, Portfolio and Fund ops are not visible to them here.",
+  "atlas-memo-agent": "Scoped to Project Atlas · read-only.",
 }
 
 // ---------------------------------------------------------------------------
-// Patel conflict and MR-14
+// The request, the scope plan, the conflict
 // ---------------------------------------------------------------------------
 
-export const PATEL = {
-  household: "Patel household",
-  id: "HH-00318",
-  conflictId: "C-0041",
-  field: "AUM",
-  a: { value: "$2,410,000", raw: 2410000, source: "Salesforce CRM", sourceId: "salesforce-crm" as SourceId, date: "Oct 29", by: "dana" },
-  b: { value: "$2,385,500", raw: 2385500, source: "AUM_Rollup row 214", sourceId: "aum-rollup" as SourceId, date: "Sep 30", by: "priya" },
-  delta: "$24,500",
-  note: "Held out of the brain. Both values kept with their sources.",
+export type RequestStatus = "done" | "scoping" | "scoped" | "queued" | "blocked"
+export type Request = { id: string; label: string; title: string; text: string; requesterId: string; submittedAt: Date; status: RequestStatus; agentId?: string; dealId?: DealId }
+export const REQUESTS: Request[] = [
+  { id: "r-3", label: "R-3", title: "Atlas IC memo · financial section", text: "When a data room lands, draft the financial section of the IC memo in our template. Start with Atlas.", requesterId: "ellen", submittedAt: new Date("2026-10-26T09:12:00-04:00"), status: "scoping", agentId: "atlas-memo-agent", dealId: "atlas" },
+  { id: "r-4", label: "R-4", title: "Monthly portfolio KPI summary", text: "Roll up the six KPI packs into one monthly summary for the ops call.", requesterId: "grace", submittedAt: new Date("2026-11-02T14:30:00-05:00"), status: "queued", agentId: "portfolio-kpi-agent" },
+  { id: "r-5", label: "R-5", title: "Quarterly LP letter draft", text: "Draft the Fund III quarterly letter from the board decks and the LP database.", requesterId: "owen", submittedAt: new Date("2026-11-02T16:45:00-05:00"), status: "blocked", agentId: "lp-letter-agent" },
+  { id: "r-2", label: "R-2", title: "Confirm IC memo template version", text: "Which IC memo template is current, and who owns it?", requesterId: "dana", submittedAt: new Date("2026-10-25T15:00:00-04:00"), status: "done" },
+  { id: "r-1", label: "R-1", title: "Index Atlas data room metadata", text: "Index folder names and file counts in the Atlas data room. No file contents.", requesterId: "tom", submittedAt: new Date("2026-10-25T10:30:00-04:00"), status: "done" },
+]
+export const REQUEST = REQUESTS[0]
+export const REQUEST_STATUS_LABEL: Record<RequestStatus, string> = { done: "Done", scoping: "Scoping", scoped: "Scoped · CR-7 open", queued: "Queued", blocked: "Blocked" }
+
+export type PlanColumn = "needs" | "ask" | "never"
+export type PlanItem = { id: string; column: PlanColumn; label: string; sourceId?: SourceId; personId?: string; laneId?: LaneId; sub?: string }
+export const PLAN_ITEMS: PlanItem[] = [
+  { id: "needs-dataroom", column: "needs", label: "Atlas data room", sourceId: "atlas-dataroom", sub: "Datasite · 1,284 files" },
+  { id: "needs-model", column: "needs", label: "Atlas model", sourceId: "atlas-model-v7", sub: "SharePoint · which version?" },
+  { id: "needs-record", column: "needs", label: "Atlas deal record", sourceId: "deal-records", sub: "DealCloud · row-filtered" },
+  { id: "needs-template", column: "needs", label: "IC memo template", sourceId: "ic-template", sub: "SharePoint · v4" },
+  { id: "ask-tom", column: "ask", label: "Tom Becker", personId: "tom", sub: "owns the data room" },
+  { id: "ask-nina", column: "ask", label: "Nina Alvarez", personId: "nina", sub: "owns the model" },
+  { id: "never-deals", column: "never", label: "Other deals", laneId: "birch", sub: "Birch · separate NDA" },
+  { id: "never-lp", column: "never", label: "LP data", sourceId: "lp-database", sub: "CCO approval required" },
+  { id: "never-fee", column: "never", label: "Fee & carry", sourceId: "fee-carry", sub: "leadership only" },
+]
+export const PLAN_COLUMN_LABEL: Record<PlanColumn, string> = { needs: "Needs", ask: "Ask", never: "Never touches" }
+
+export const SCAN = { systems: 6, files: 1284, rows: 0, running: "Scanning metadata", done: "Scan complete · schemas and metadata only." }
+
+export const REVENUE = {
+  id: "H-0007",
+  metric: "TTM revenue",
+  period: "Sep 2026",
+  dealId: "atlas" as DealId,
+  a: { value: "$48.2M", source: "CIM, p.14", file: "01_CIM/Northline_CIM.pdf", loc: "p.14", sourceId: "atlas-dataroom" as SourceId, by: "tom", date: "Oct 29" },
+  b: { value: "$46.9M", source: "Monthly P&L, tab TTM, cell F42", file: "04_Financials/Monthly_PL_FY26.xlsx", loc: "TTM!F42", sourceId: "atlas-dataroom" as SourceId, by: "nina", date: "Nov 3" },
+  delta: "$1.3M",
+  note: "Held out of the agent's facts. Both values kept with their sources.",
+  task: { text: "Resolve TTM revenue: CIM p.14 vs Monthly P&L F42", assignee: "nina", due: "Nov 12" },
 }
 
-export const MR = {
-  number: 14,
-  slug: "mr-14",
-  title: "Bring Onboarding and Billing into the firm brain",
-  openedBy: "merge-agent",
-  openedAt: new Date("2026-10-30T18:12:00-04:00"),
-  reviewer: "dana",
-  branch: "merge/onboarding-billing",
-  target: "firm-brain",
-  stats: { merged: 2184, held: 37, sources: 2 },
+// ---------------------------------------------------------------------------
+// Connection request CR-7
+// ---------------------------------------------------------------------------
+
+export type CheckStatus = "pass" | "warn"
+export type Check = { id: string; label: string; detail: string; status: CheckStatus; ms: string }
+
+export const CR = {
+  number: 7,
+  slug: "cr-7",
+  title: "Connect Atlas sources to atlas-memo-agent",
+  openedBy: "connect-agent",
+  openedAt: new Date("2026-11-03T16:40:00-05:00"),
+  requestId: "r-3",
+  agentId: "atlas-memo-agent",
+  sources: ["atlas-dataroom", "atlas-model-v7", "deal-records", "ic-template"] as SourceId[],
+  approvers: [
+    { id: "ellen", role: "Deal partner" },
+    { id: "grace", role: "CCO" },
+  ],
+  stats: { sources: 4, replayed: 412, outside: 0, held: 1 },
   summary:
-    "Onboarding (SharePoint) and Billing (SQL Server) both passed the readiness pass: owners confirmed, schemas documented, every row keyed to a household. This request merges 2,184 records into the firm brain. 37 records disagree with a value already in the brain and are held for Dana Ruiz, not guessed.",
-  notRead: "I did not read Salesforce CRM or AUM_Rollup.xlsx for this request. The Patel household AUM is still held as conflict C-0041 until an owner picks a value.",
+    "Request R-3 needs four Atlas sources: the data room, the current model, the Atlas deal record and the IC memo template. All four passed readiness with a confirmed owner. This request grants atlas-memo-agent read access to exactly those four, enforced at each system, and nothing else.",
+  notRead: "No rows were read to prepare this request. The TTM revenue value is held as H-0007 and stays out of the agent's facts until Nina Alvarez resolves it.",
+  diff: [
+    "+ agent: atlas-memo-agent",
+    "+ read: datasite://atlas/**        (group: atlas-deal-team)",
+    "+ read: sharepoint://deals/atlas/Atlas_Model_v7.xlsx",
+    "+ read: dealcloud.deals WHERE deal_id = 'ATLAS'",
+    "+ read: sharepoint://templates/ic-memo-v4.docx",
+    "+ write: none (drafts returned for review)",
+  ],
   checks: [
-    { id: "traced", label: "Every merged value traced to a source row", detail: "2,184 of 2,184 values carry a source path and row reference.", status: "pass" as const, ms: "1.4s" },
-    { id: "restricted", label: "No reads of restricted data", detail: "Advisor_Comp.xlsx and KYC records were not opened. Verified from the data-layer audit.", status: "pass" as const, ms: "0.3s" },
-    { id: "held", label: "37 records held for a person, not guessed", detail: "Each held record names the two sources that disagree and is routed to Dana Ruiz.", status: "warn" as const, ms: "0.6s" },
-  ],
+    { id: "dryrun", label: "Dry run: 0 reads outside Project Atlas", detail: "412 attempted queries replayed against the proposed scope. Every read landed inside Atlas or the template.", status: "pass", ms: "2.3s" },
+    { id: "nored", label: "No red sources in scope", detail: "Birch, LP database and fee & carry are outside the request. Verified against the policy set.", status: "pass", ms: "0.2s" },
+    { id: "traced", label: "Every fact traced to a file and location", detail: "Dry-run output cites a path and a page or cell for each of 23 facts.", status: "pass", ms: "1.1s" },
+    { id: "held", label: "1 value held for a person: TTM revenue", detail: "CIM p.14 ($48.2M) and Monthly P&L F42 ($46.9M) disagree. Held as H-0007 for Nina Alvarez, not guessed.", status: "warn", ms: "0.4s" },
+  ] as Check[],
   timeline: [
-    { id: "t1", at: new Date("2026-10-30T18:12:00-04:00"), actor: "merge-agent", text: "opened this request from 2 ready sources" },
-    { id: "t2", at: new Date("2026-10-30T18:13:00-04:00"), actor: "merge-agent", text: "ran 3 checks · 2 passed, 1 warning" },
-    { id: "t3", at: new Date("2026-10-30T18:40:00-04:00"), actor: "sam", text: "commented: no restricted reads in the audit. Fine by compliance." },
-    { id: "t4", at: new Date("2026-10-31T08:55:00-04:00"), actor: "dana", text: "requested the Okafor hold be shown in the diff" },
-    { id: "t5", at: new Date("2026-10-31T09:02:00-04:00"), actor: "merge-agent", text: "updated Changes · Okafor Family Trust shown as held" },
+    { id: "t1", at: new Date("2026-11-03T16:40:00-05:00"), actor: "connect-agent", text: "opened this request from scope plan R-3" },
+    { id: "t2", at: new Date("2026-11-03T16:41:00-05:00"), actor: "connect-agent", text: "ran 4 checks · 3 passed, 1 warning" },
+    { id: "t3", at: new Date("2026-11-03T17:12:00-05:00"), actor: "atlas-memo-agent", text: "dry run blocked a read of datasite://birch/** · logged A-0117" },
+    { id: "t4", at: new Date("2026-11-04T09:05:00-05:00"), actor: "dana", text: "set the DealCloud row filter to deal_id = 'ATLAS'" },
+    { id: "t5", at: new Date("2026-11-04T09:58:00-05:00"), actor: "connect-agent", text: "re-ran the dry run · 412 queries, 0 outside Atlas" },
   ],
 }
 
-export const PATEL_COLLAPSE = {
-  id: "HH-00318",
-  household: "Patel household",
-  before: [
-    { sourceId: "onboarding" as SourceId, label: "Onboarding · item ONB-2024-118", fields: { name: "Patel, Anita & Rohan", advisor: "Marcus Lee", opened: "2019-03-11", status: "Complete" } },
-    { sourceId: "billing" as SourceId, label: "Billing · account BIL-77812", fields: { name: "A & R Patel", fee_schedule: "Tier 2 · 0.85%", last_invoice: "2026-10-01", aum_billed: "$2,385,500" } },
-  ],
-  after: { id: "HH-00318", name: "Patel household", advisor: "Marcus Lee", since: "2019-03-11", fee_schedule: "Tier 2 · 0.85%", aum: "held · C-0041 (Salesforce vs AUM_Rollup)" },
-}
-
-export const OKAFOR_HOLD = {
-  id: "HH-00402",
-  household: "Okafor Family Trust",
-  field: "AUM",
-  a: { source: "Billing (SQL Server)", sourceId: "billing" as SourceId, value: "$8,120,000", date: "Oct 1" },
-  b: { source: "Custodian feed (in brain)", sourceId: "custodian-feed" as SourceId, value: "$7,250,000", date: "Oct 31" },
-  delta: "12%",
-  note: "Billing AUM differs from custodian positions by 12%. Held for Dana Ruiz. Nothing guessed.",
-}
-
-export const OTHER_HELD: { id: string; name: string; field: string; sources: string }[] = [
-  { id: "HH-00017", name: "Abernathy", field: "Primary email", sources: "Onboarding vs Salesforce" },
-  { id: "HH-00044", name: "Brandt Living Trust", field: "Fee schedule", sources: "Billing vs Salesforce" },
-  { id: "HH-00071", name: "Castellanos", field: "Advisor", sources: "Onboarding vs Salesforce" },
-  { id: "HH-00093", name: "Delacroix", field: "AUM", sources: "Billing vs Custodian feed" },
-  { id: "HH-00120", name: "Eriksen", field: "Mailing address", sources: "Onboarding vs Salesforce" },
-  { id: "HH-00138", name: "Fairweather", field: "Fee schedule", sources: "Billing vs Salesforce" },
-  { id: "HH-00155", name: "Gallo Family", field: "AUM", sources: "Billing vs Custodian feed" },
-  { id: "HH-00191", name: "Haddad", field: "Advisor", sources: "Onboarding vs Salesforce" },
-  { id: "HH-00206", name: "Iverson", field: "Primary email", sources: "Onboarding vs Salesforce" },
-  { id: "HH-00233", name: "Jablonski Trust", field: "AUM", sources: "Billing vs Custodian feed" },
-  { id: "HH-00259", name: "Kowalczyk", field: "Mailing address", sources: "Onboarding vs Salesforce" },
-  { id: "HH-00287", name: "Lindqvist", field: "Fee schedule", sources: "Billing vs Salesforce" },
+export const CONNECTIONS_LIST = [
+  { id: "cr-7", label: "CR-7", title: CR.title, openedBy: "connect-agent", openedAt: CR.openedAt, status: "open" as const, approvals: "0 of 2", href: href("/connections/cr-7") },
+  { id: "cr-6", label: "CR-6", title: "Connect DealCloud metadata to connect-agent", openedBy: "connect-agent", openedAt: new Date("2026-10-25T11:00:00-04:00"), status: "merged" as const, approvals: "2 of 2", href: href("/connections") },
+  { id: "cr-5", label: "CR-5", title: "Connect Datasite and SharePoint metadata", openedBy: "dana", openedAt: new Date("2026-10-25T10:30:00-04:00"), status: "merged" as const, approvals: "2 of 2", href: href("/connections") },
 ]
 
 // ---------------------------------------------------------------------------
@@ -618,95 +785,146 @@ export const OTHER_HELD: { id: string; name: string; field: string; sources: str
 export type TraceKind = "scope" | "read" | "blocked" | "conflict" | "done"
 export type TraceStep = { n: number; kind: TraceKind; title: string; detail: string; path: string; policyId?: string }
 
-export const RUN_PROMPT = "Prep my Thursday review with the Patel household."
+export const RUN_PROMPT = "Draft the financial section of the Atlas IC memo."
 
 export const TRACE: TraceStep[] = [
-  { n: 1, kind: "scope", title: "Scope resolved", detail: "Acting for Marcus Lee. 3 sources in scope, brain scoped to his 118 households.", path: "policy://advisor-scope → marcus-lee/book" },
-  { n: 2, kind: "read", title: "Read household record", detail: "Patel household HH-00318, 2 adults, 2 custodial accounts.", path: "salesforce-crm/households/HH-00318" },
-  { n: 3, kind: "read", title: "Read tracker rows", detail: "4 rows for Patel, last edited Aug 14.", path: "client-tracker/Client_Tracker_FINAL_v3.xlsx!Households:A118:K121" },
-  { n: 4, kind: "read", title: "Read client documents", detail: "6 files, newest Oct 14 (IPS draft).", path: "file-share/Clients/Patel/* (6 files)" },
-  { n: 5, kind: "conflict", title: "Conflict found, both values kept", detail: "AUM $2,410,000 (Salesforce, Oct 29) vs $2,385,500 (AUM_Rollup row 214, Sep 30). Held as C-0041.", path: "brain/conflicts/C-0041" },
-  { n: 6, kind: "blocked", title: "Blocked: compare with similar households", detail: "Would read other advisors' households. Denied at the data layer and logged.", path: "policy://advisor-scope → audit/A-2031", policyId: "advisor-scope" },
-  { n: 7, kind: "done", title: "Brief assembled", detail: "5 sources cited, 1 gap typed, 1 request blocked.", path: "brief/2026-10-31/patel-review" },
+  { n: 1, kind: "scope", title: "Checked scope: Project Atlas, read-only", detail: "4 sources in scope. Writes disabled. Drafts return to the deal team.", path: "policy: atlas-memo-agent" },
+  { n: 2, kind: "read", title: "Read memo template", detail: "Section 4, Financial summary. Headings and required fields.", path: "ic-memo-v4.docx" },
+  { n: 3, kind: "read", title: "Read deal record", detail: "Northline Mechanical, HVAC services. IC date Nov 20. NWC peg field present.", path: "dealcloud.deals / ATLAS" },
+  { n: 4, kind: "read", title: "Read model", detail: "Summary, NWC and Adjustments tabs. Adj. EBITDA $9.1M on FY26 TTM.", path: "Atlas_Model_v7.xlsx / Summary" },
+  { n: 5, kind: "read", title: "Read 23 data-room files", detail: "CIM, monthly P&L, QoE draft, customer detail. Each fact kept with its page or cell.", path: "datasite://atlas/04_Financials/*" },
+  { n: 6, kind: "blocked", title: "Blocked: pull comparable deal metrics from Project Birch", detail: "The Birch NDA restricts use to Birch, so the agent continued without them.", path: "policy: deal-data-within-deal", policyId: "birch-nda" },
+  { n: 7, kind: "conflict", title: "Revenue doesn't tie: kept both values", detail: "$48.2M (CIM p.14) vs $46.9M (Monthly P&L F42). Held as H-0007.", path: "task: Nina Alvarez" },
+  { n: 8, kind: "done", title: "Drafted section in template, returned for review", detail: "23 files cited, 1 value unresolved, 1 request blocked.", path: "drafts/atlas/ic-memo-s4-v0.1.docx" },
 ]
 
-export type BriefBlock = { id: string; heading?: string; text: string; cites: number[] }
+export type Cite = { n: number; label: string }
+export type BriefBlock = { id: string; heading: string; text: string; cites: Cite[]; unresolved?: { a: string; b: string } }
 export const BRIEF: BriefBlock[] = [
-  { id: "hh", heading: "Household", text: "Anita and Rohan Patel, HH-00318. Two adults, two custodial accounts for Maya and Dev. Clients since March 2019, Marcus Lee is advisor of record.", cites: [2] },
-  { id: "aum", heading: "Assets", text: "Salesforce shows $2,410,000 as of Oct 29. AUM_Rollup shows $2,385,500 as of Sep 30. The two disagree by $24,500 and are held as conflict C-0041. Lead with the Salesforce figure and say the September rollup is older.", cites: [2, 5] },
-  { id: "open", heading: "Open items from your tracker", text: "529 funding for Maya, noted Aug 14 and not closed. Beneficiary update on the joint account still pending.", cites: [3] },
-  { id: "docs", heading: "Documents", text: "Q3 statement, IPS draft updated Oct 14, 2025 tax organizer. Nothing newer than Oct 14 is on file.", cites: [4] },
-  { id: "gap", heading: "Not included", text: "A comparison with similar households. That would read other advisors' clients and is blocked by policy. If you need it, Dana Ruiz can grant a scoped exception.", cites: [6] },
-  { id: "agenda", heading: "Suggested agenda", text: "1. Confirm the AUM figure. 2. Close the 529 funding. 3. Sign the IPS. 4. Beneficiary update.", cites: [2, 3, 4] },
+  {
+    id: "revenue",
+    heading: "Revenue",
+    text: "TTM revenue to September 2026 is $46.9M per the monthly P&L, up 11.8% on the prior period. The CIM states $48.2M; the two do not tie and the difference is held for Nina Alvarez.",
+    cites: [
+      { n: 5, label: "Monthly_PL_FY26.xlsx · TTM!F42" },
+      { n: 5, label: "Northline_CIM.pdf · p.14" },
+    ],
+    unresolved: { a: "$48.2M CIM", b: "$46.9M P&L" },
+  },
+  {
+    id: "ebitda",
+    heading: "Adj. EBITDA",
+    text: "$9.1M Adj. EBITDA on FY26 TTM, a 19.4% margin. Adjustments total $0.6M, mostly owner compensation and a one-time ERP migration.",
+    cites: [
+      { n: 4, label: "Atlas_Model_v7.xlsx · Summary!C18" },
+      { n: 5, label: "QoE_Draft.pdf · p.6" },
+    ],
+  },
+  {
+    id: "concentration",
+    heading: "Customer concentration",
+    text: "Top 10 customers are 31% of revenue; the largest is 7%. No customer above 10% in any of the last three years.",
+    cites: [{ n: 5, label: "Customer_Detail.xlsx · Top10!B4:B13" }],
+  },
+  {
+    id: "nwc",
+    heading: "Working capital",
+    text: "Net working capital averaged $4.2M over the TTM with a seasonal peak in July. The model assumes a $4.0M peg, consistent with the deal record.",
+    cites: [
+      { n: 4, label: "Atlas_Model_v7.xlsx · NWC!F9" },
+      { n: 3, label: "dealcloud.deals / ATLAS · nwc_peg" },
+    ],
+  },
+  {
+    id: "gap",
+    heading: "Not included",
+    text: "Comparable metrics from Project Birch. The Birch NDA limits that material to Birch, so the request was blocked and this section continues without it.",
+    cites: [{ n: 6, label: "policy: deal-data-within-deal" }],
+  },
 ]
 
-export const RUN_FOOTER = `${MODEL.name} on ${MODEL.host}, ${MODEL.rack} · 0 bytes left the network · 5 sources cited · 1 request blocked`
+export const RUN_FOOTER = `${MODEL.name} (${MODEL.tenant}) · Enakt Inc. accessed nothing · 23 files cited · 1 request blocked`
 
-export const RUN_HISTORY = [
-  { id: "r-118", at: new Date("2026-10-30T16:02:00-04:00"), prompt: "Summarize what changed for the Okafor Family Trust this month.", cites: 3, blocked: 0, ms: "6.1s" },
-  { id: "r-117", at: new Date("2026-10-29T09:40:00-04:00"), prompt: "Draft talking points for the Lindqvist annual review.", cites: 4, blocked: 0, ms: "7.4s" },
-  { id: "r-116", at: new Date("2026-10-28T14:15:00-04:00"), prompt: "Which of my households have an IPS older than 3 years?", cites: 2, blocked: 0, ms: "3.9s" },
-  { id: "r-115", at: new Date("2026-10-27T11:22:00-04:00"), prompt: "List my households with a 529 account.", cites: 2, blocked: 1, ms: "4.2s" },
+export type HistoryRow = { id: string; at: Date; prompt: string; cites: number; blocked: number; ms: string }
+export const RUN_HISTORY: Record<string, HistoryRow[]> = {
+  "atlas-memo-agent": [],
+  "connect-agent": [
+    { id: "c-41", at: new Date("2026-11-04T09:58:00-05:00"), prompt: "Re-run the CR-7 dry run against the proposed scope.", cites: 0, blocked: 0, ms: "2.3s" },
+    { id: "c-40", at: new Date("2026-11-03T16:40:00-05:00"), prompt: "Open a connection request for scope plan R-3.", cites: 0, blocked: 0, ms: "4.1s" },
+    { id: "c-39", at: new Date("2026-11-02T10:10:00-05:00"), prompt: "Scan Portfolio KPI pack metadata.", cites: 0, blocked: 0, ms: "1.8s" },
+  ],
+  "portfolio-kpi-agent": [],
+  "lp-letter-agent": [],
+}
+
+// ---------------------------------------------------------------------------
+// Rollout
+// ---------------------------------------------------------------------------
+
+export type Milestone = { id: string; day: number; date: string; label: string; done: boolean; gate?: string; side?: "top" | "bottom" }
+export const MILESTONES: Milestone[] = [
+  { id: "d1", day: 1, date: "Oct 24", label: "Installed in tenant", done: true },
+  { id: "d3", day: 3, date: "Oct 26", label: "First request", done: true, side: "top" },
+  { id: "d8", day: 8, date: "Oct 31", label: "Clarifications", done: true },
+  { id: "d12", day: 12, date: "Nov 4", label: "Map + readiness", done: true },
+  { id: "d15", day: 15, date: "Nov 7", label: "CR-7 approved", done: false, gate: "Ellen Marsh and Grace Liu" },
+  { id: "d19", day: 19, date: "Nov 11", label: "First agent live", done: false, gate: "atlas-memo-agent", side: "top" },
+  { id: "d30", day: 30, date: "Nov 22", label: "Three agents live", done: false, gate: "portfolio-kpi, lp-letter" },
 ]
 
 // ---------------------------------------------------------------------------
-// Audit log, notifications
+// Audit log, notifications, access log
 // ---------------------------------------------------------------------------
 
-export type AuditKind = "read" | "blocked" | "merge" | "policy" | "intake" | "system" | "task"
+export type AuditKind = "read" | "blocked" | "connect" | "approve" | "policy" | "request" | "system" | "task"
 export type AuditEntry = { id: string; at: Date; actorId: string; kind: AuditKind; text: string; href?: string; path?: string }
 
 export const AUDIT: AuditEntry[] = [
-  { id: "A-2034", at: new Date("2026-10-31T09:58:00-04:00"), actorId: "compliance-reviewer", kind: "read", text: "read 42 new compliance log entries", path: "compliance-log/events?since=2026-10-30" },
-  { id: "A-2033", at: new Date("2026-10-31T09:02:00-04:00"), actorId: "merge-agent", kind: "merge", text: "updated MR-14 changes · Okafor Family Trust shown as held", href: href("/build/mr-14") },
-  { id: "A-2032", at: new Date("2026-10-31T08:55:00-04:00"), actorId: "dana", kind: "merge", text: "commented on MR-14", href: href("/build/mr-14") },
-  { id: "A-2031", at: new Date("2026-10-30T17:48:00-04:00"), actorId: "marcus-assistant", kind: "blocked", text: "blocked: attempted to read households outside Marcus Lee's book · policy advisor-scope", path: "salesforce-crm/households?advisor!=marcus-lee", href: href("/agents/marcus-assistant") },
-  { id: "A-2030", at: new Date("2026-10-30T17:40:00-04:00"), actorId: "dana", kind: "task", text: "closed 3 onboarding items", path: "onboarding/items" },
-  { id: "A-2029", at: new Date("2026-10-30T16:20:00-04:00"), actorId: "sam", kind: "task", text: "added refresh dates to 11 KYC records", path: "kyc/CLIENT_VERIFICATION" },
-  { id: "A-2028", at: new Date("2026-10-30T16:02:00-04:00"), actorId: "marcus-assistant", kind: "read", text: "read Okafor Family Trust across 3 sources for a monthly summary", path: "brain/households/HH-00402" },
-  { id: "A-2027", at: new Date("2026-10-30T18:12:00-04:00"), actorId: "merge-agent", kind: "merge", text: "opened MR-14 · 2,184 records from Onboarding and Billing", href: href("/build/mr-14") },
-  { id: "A-2026", at: new Date("2026-10-30T11:05:00-04:00"), actorId: "dana", kind: "task", text: "tagged 212 client documents with household IDs", path: "client-docs/Clients/*" },
-  { id: "A-2025", at: new Date("2026-10-30T09:30:00-04:00"), actorId: "intake-agent", kind: "intake", text: "sent reminder 2 to Planning team · no response", href: href("/intake") },
-  { id: "A-2024", at: new Date("2026-10-29T14:12:00-04:00"), actorId: "dana", kind: "task", text: "updated Patel household AUM in Salesforce to $2,410,000", path: "salesforce-crm/households/HH-00318" },
-  { id: "A-2023", at: new Date("2026-10-29T09:40:00-04:00"), actorId: "marcus-assistant", kind: "read", text: "read Lindqvist household across 4 sources for a review", path: "brain/households/HH-00287" },
-  { id: "A-2022", at: new Date("2026-10-28T15:10:00-04:00"), actorId: "ops-assistant", kind: "read", text: "read 37 open onboarding items for a status draft", path: "onboarding/items?status=open" },
-  { id: "A-2021", at: new Date("2026-10-28T09:30:00-04:00"), actorId: "intake-agent", kind: "intake", text: "sent reminder 1 to Planning team", href: href("/intake") },
-  { id: "A-2020", at: new Date("2026-10-27T11:22:00-04:00"), actorId: "marcus-assistant", kind: "blocked", text: "blocked: requested Prospects_2025.xlsx, source is stale and not in scope", path: "prospects/Prospects_2025.xlsx" },
-  { id: "A-2019", at: new Date("2026-10-24T20:05:00-04:00"), actorId: "dana", kind: "merge", text: "approved and merged MR-11 · Custodian feed into the firm brain", href: href("/build") },
-  { id: "A-2018", at: new Date("2026-10-23T17:30:00-04:00"), actorId: "sam", kind: "merge", text: "approved and merged MR-9 · Compliance log into the firm brain", href: href("/build") },
-  { id: "A-2017", at: new Date("2026-10-22T14:00:00-04:00"), actorId: "dana", kind: "policy", text: "set policy: agents propose, a person approves every merge", href: href("/permissions") },
-  { id: "A-2016", at: new Date("2026-10-22T14:00:00-04:00"), actorId: "sam", kind: "policy", text: "set policy: every value in the brain traces to a source row", href: href("/permissions") },
-  { id: "A-2015", at: new Date("2026-10-21T09:00:00-04:00"), actorId: "chris", kind: "system", text: "installed Enakt 1.8.2 inside the Ashcombe network · cloud model vendors disabled by policy", href: href("/settings?tab=deployment") },
+  { id: "A-0120", at: new Date("2026-11-04T09:58:00-05:00"), actorId: "connect-agent", kind: "connect", text: "re-ran the CR-7 dry run · 412 queries replayed, 0 reads outside Project Atlas", href: href("/connections/cr-7") },
+  { id: "A-0119", at: new Date("2026-11-04T09:40:00-05:00"), actorId: "nina", kind: "task", text: "confirmed Atlas_Model_v7 as the current model", path: "sharepoint://deals/atlas/Atlas_Model_v7.xlsx" },
+  { id: "A-0118", at: new Date("2026-11-04T09:05:00-05:00"), actorId: "dana", kind: "policy", text: "set the DealCloud row filter for atlas-memo-agent · deal_id = 'ATLAS'", path: "dealcloud.deals · row filter" },
+  { id: "A-0117", at: new Date("2026-11-03T17:12:00-05:00"), actorId: "atlas-memo-agent", kind: "blocked", text: "blocked: attempted to read datasite://birch/** during a dry run · policy deal-data-within-deal", path: "datasite://birch/** → denied at Datasite group", href: href("/agents/atlas-memo-agent") },
+  { id: "A-0116", at: new Date("2026-11-03T16:40:00-05:00"), actorId: "connect-agent", kind: "connect", text: "opened CR-7 · connect 4 Atlas sources to atlas-memo-agent", href: href("/connections/cr-7") },
+  { id: "A-0115", at: new Date("2026-11-03T15:20:00-05:00"), actorId: "grace", kind: "policy", text: "held the lp-letter-agent request · LP database stays red pending review", href: href("/rollout") },
+  { id: "A-0114", at: new Date("2026-11-03T11:02:00-05:00"), actorId: "tom", kind: "task", text: "confirmed Datasite folder IDs for Atlas · 1,284 files", path: "datasite://atlas/** · folder index" },
+  { id: "A-0113", at: new Date("2026-11-02T16:45:00-05:00"), actorId: "owen", kind: "request", text: "submitted R-5 · quarterly LP letter draft (needs LP database)", href: href("/requests") },
+  { id: "A-0112", at: new Date("2026-11-02T14:30:00-05:00"), actorId: "grace", kind: "request", text: "submitted R-4 · monthly portfolio KPI summary", href: href("/requests") },
+  { id: "A-0111", at: new Date("2026-11-02T10:10:00-05:00"), actorId: "connect-agent", kind: "read", text: "scanned Portfolio KPI pack metadata · 6 workbooks, 2 missing September", path: "sharepoint://portfolio/kpi/*.xlsx · metadata" },
+  { id: "A-0110", at: new Date("2026-10-31T15:05:00-04:00"), actorId: "nina", kind: "task", text: "answered clarification 3 · TTM revenue conflict logged as H-0007", href: href("/requests/r-3") },
+  { id: "A-0109", at: new Date("2026-10-31T14:50:00-04:00"), actorId: "tom", kind: "task", text: "answered clarification 2 · policy deal-data-within-deal recorded", href: href("/requests/r-3") },
+  { id: "A-0108", at: new Date("2026-10-31T14:35:00-04:00"), actorId: "nina", kind: "task", text: "answered clarification 1 · Atlas_Model_v7 is current, v6 retired", href: href("/requests/r-3") },
+  { id: "A-0107", at: new Date("2026-10-30T09:20:00-04:00"), actorId: "connect-agent", kind: "read", text: "scanned 6 systems for R-3 · 1,284 files · 0 rows read", path: "metadata://** · schemas and file lists" },
+  { id: "A-0106", at: new Date("2026-10-28T11:00:00-04:00"), actorId: "grace", kind: "policy", text: "set policy: LP data needs CCO approval before any agent reads it", href: href("/policies") },
+  { id: "A-0105", at: new Date("2026-10-28T11:00:00-04:00"), actorId: "grace", kind: "policy", text: "set policy: fee & carry is leadership only, no agents", href: href("/policies") },
+  { id: "A-0104", at: new Date("2026-10-27T14:00:00-04:00"), actorId: "dana", kind: "policy", text: "set policy: agents propose connections; the deal partner and the CCO approve", href: href("/policies") },
+  { id: "A-0103", at: new Date("2026-10-26T09:12:00-04:00"), actorId: "ellen", kind: "request", text: "submitted R-3 · draft the financial section of the IC memo, start with Atlas", href: href("/requests/r-3") },
+  { id: "A-0102", at: new Date("2026-10-25T10:30:00-04:00"), actorId: "dana", kind: "system", text: "connected Datasite, SharePoint and DealCloud · metadata only", href: href("/settings?tab=connections") },
+  { id: "A-0101", at: new Date("2026-10-24T09:00:00-04:00"), actorId: "dana", kind: "system", text: "Calloway Hill IT installed Enakt 1.9.0 in the Azure tenant · Enakt Inc. accounts: none", href: href("/settings?tab=deployment") },
 ]
 
 export const NOTIFICATIONS = [
-  { id: "n1", text: "merge-agent opened MR-14 · 2,184 records ready, 37 held for you", at: new Date("2026-10-30T18:12:00-04:00"), href: href("/build/mr-14") },
-  { id: "n2", text: "marcus-assistant was blocked by policy advisor-scope · logged A-2031", at: new Date("2026-10-30T17:48:00-04:00"), href: href("/audit") },
-  { id: "n3", text: "Planning team has not answered intake after 2 reminders", at: new Date("2026-10-30T09:30:00-04:00"), href: href("/intake") },
+  { id: "n1", text: "Nina Alvarez has a task: resolve TTM revenue, CIM p.14 vs Monthly P&L F42 · due Nov 12", at: new Date("2026-11-03T16:41:00-05:00"), href: href("/readiness?source=atlas-dataroom") },
+  { id: "n2", text: "CR-7 is waiting for approval from Ellen Marsh and Grace Liu · connect Atlas sources to atlas-memo-agent", at: new Date("2026-11-03T16:40:00-05:00"), href: href("/connections/cr-7") },
+  { id: "n3", text: "R-5 lp-letter-agent is blocked · needs the LP database, awaiting a CCO decision", at: new Date("2026-11-03T15:20:00-05:00"), href: href("/rollout") },
 ]
 
-/** Daily egress since install, in bytes. Flat at zero. */
-export const EGRESS = Array.from({ length: 11 }, (_, i) => ({ day: new Date(2026, 9, 21 + i), bytes: 0 }))
+/** Access attempts by Enakt Inc. accounts per day since install. Flat at zero. */
+export const ACCESS_LOG = Array.from({ length: 12 }, (_, i) => ({ day: new Date(2026, 9, 24 + i), count: 0 }))
 
 export const SETTINGS_MEMBERS = [
   { id: "dana", seat: "Admin", lastActive: NOW },
-  { id: "chris", seat: "Admin", lastActive: new Date("2026-10-30T15:00:00-04:00") },
-  { id: "sam", seat: "Compliance", lastActive: new Date("2026-10-31T09:40:00-04:00") },
-  { id: "marcus", seat: "Member", lastActive: new Date("2026-10-30T16:10:00-04:00") },
-  { id: "priya", seat: "Member", lastActive: new Date("2026-10-30T12:30:00-04:00") },
+  { id: "grace", seat: "Compliance", lastActive: new Date("2026-11-04T09:30:00-05:00") },
+  { id: "ellen", seat: "Partner", lastActive: new Date("2026-11-03T18:10:00-05:00") },
+  { id: "owen", seat: "Partner", lastActive: new Date("2026-11-02T16:45:00-05:00") },
+  { id: "tom", seat: "Member", lastActive: new Date("2026-11-04T08:50:00-05:00") },
+  { id: "nina", seat: "Member", lastActive: new Date("2026-11-04T09:40:00-05:00") },
 ]
 
-export const CONNECTIONS: { sourceId: SourceId; mode: string; status: "connected" | "metadata" | "off" }[] = [
-  { sourceId: "salesforce-crm", mode: "Metadata + read (scoped)", status: "connected" },
-  { sourceId: "onboarding", mode: "Metadata + read", status: "connected" },
-  { sourceId: "client-docs", mode: "Metadata + read (scoped)", status: "connected" },
-  { sourceId: "client-tracker", mode: "Metadata + read (scoped)", status: "connected" },
-  { sourceId: "prospects", mode: "Metadata only", status: "metadata" },
-  { sourceId: "custodian-feed", mode: "Metadata + read", status: "connected" },
-  { sourceId: "aum-rollup", mode: "Metadata + read", status: "connected" },
-  { sourceId: "billing", mode: "Metadata + read", status: "connected" },
-  { sourceId: "kyc", mode: "Metadata only · compliance reads", status: "metadata" },
-  { sourceId: "compliance-log", mode: "Metadata + read", status: "connected" },
-  { sourceId: "advisor-comp", mode: "Not connected by policy", status: "off" },
-  { sourceId: "planning-cases", mode: "Metadata only · no owner", status: "metadata" },
+export const SYSTEMS: { id: string; type: SourceType; name: string; lastSync: Date | null; mode: "scoped" | "metadata" | "off"; detail: string }[] = [
+  { id: "datasite", type: "datasite", name: "Datasite", lastSync: SYNC(10, 11), mode: "scoped", detail: "Atlas and Birch rooms · group membership enforced" },
+  { id: "sharepoint", type: "sharepoint", name: "SharePoint", lastSync: SYNC(10, 9), mode: "scoped", detail: "deals, templates, portfolio sites · site permissions" },
+  { id: "dealcloud", type: "dealcloud", name: "DealCloud", lastSync: SYNC(10, 4), mode: "scoped", detail: "deals table · row filter by deal_id" },
+  { id: "excel", type: "excel", name: "Excel file shares", lastSync: SYNC(9, 10), mode: "metadata", detail: "KPI packs and fee & carry · names and sizes only" },
+  { id: "fundadmin", type: "fundadmin", name: "Fund admin portal", lastSync: new Date("2026-11-03T18:00:00-05:00"), mode: "metadata", detail: "LP database · schema only, CCO role required" },
+  { id: "outlook", type: "outlook", name: "Outlook", lastSync: null, mode: "off", detail: "Deal-team groups · not connected" },
 ]

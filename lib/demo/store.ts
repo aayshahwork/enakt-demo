@@ -9,62 +9,65 @@ import { createJSONStorage, persist } from "zustand/middleware"
 import { toast } from "sonner"
 import {
   AUDIT,
-  BRAIN,
+  CR,
   INITIAL_MATRIX,
-  MR,
-  MR14_SOURCES,
+  METER,
   NOW,
   POLICY_BY_ID,
   SOURCES,
   type AccessLevel,
   type AuditEntry,
+  type LaneId,
   type Matrix,
+  type PlanColumn,
   type ResourceId,
   type Verdict,
   type Viewer,
   href,
 } from "./fixtures"
-import { buildIntakeTimeline, buildRunTimeline, type IntervieweeStatus, type TimelineEvent, type TranscriptEntry } from "./script"
+import { buildRequestTimeline, buildRunTimeline, type PersonStatus, type TimelineEvent, type TranscriptEntry } from "./script"
 import { TimelinePlayer, type PlayerStatus } from "./player"
 import { runProgress } from "./sim"
 
 export type Phase = "idle" | "playing" | "paused" | "done"
-export type MergeStatus = "open" | "merging" | "merged"
+export type ConnectStatus = "open" | "merging" | "merged"
 export type Speed = 1 | 1.5 | 2
 
 export type NodeState = {
   verdict: Verdict
   placeholder?: { label: string; hint: string }
-  noOwner?: boolean
-  policies: string[]
 }
 
 export type DemoState = {
   hydrated: boolean
 
-  // Intake
-  intakePhase: Phase
+  // Request R-3
+  requestPhase: Phase
+  scan: "idle" | "running" | "done"
+  scanSystems: number
+  scanFiles: number
+  plan: Record<PlanColumn, string[]>
+  people: Record<string, PersonStatus>
   transcript: TranscriptEntry[]
-  interviewees: Record<string, IntervieweeStatus>
-  readiness: "idle" | "running" | "done"
-  people: string[]
-  workflows: string[]
   openQuestions: Record<string, "open" | "resolved">
 
   // Canvas
-  brainVisible: boolean
-  brainMerged: number
-  brainPolicies: string[]
+  lanes: LaneId[]
+  lanePolicies: Partial<Record<LaneId, string[]>>
   nodes: Partial<Record<string, NodeState>>
   edges: string[]
   policies: string[]
+  agents: string[]
+  liveAgents: string[]
   progress: number
 
-  // Build / merge
-  mergeStatus: MergeStatus
-  mergePct: number
+  // Connection request CR-7
+  crStatus: ConnectStatus
+  crPct: number
+  approvals: string[]
+  milestonesDone: string[]
 
-  // Permissions
+  // Policies matrix
   matrix: Matrix
   draft: Matrix | null
 
@@ -75,6 +78,7 @@ export type DemoState = {
   briefOrder: string[]
   briefShown: Record<string, number>
   hoverStep: number | null
+  sentForReview: boolean
 
   // Audit and shell
   extraAudit: AuditEntry[]
@@ -88,15 +92,15 @@ export type DemoState = {
 export type DemoActions = {
   applyEvent: (e: TimelineEvent) => void
   reset: () => void
-  startIntake: () => void
-  pauseIntake: () => void
-  resumeIntake: () => void
-  skipIntake: () => void
+  startRequest: () => void
+  pauseRequest: () => void
+  resumeRequest: () => void
+  skipRequest: () => void
   startRun: () => void
   pauseRun: () => void
   resumeRun: () => void
   togglePause: () => boolean
-  approveMerge: () => Promise<void>
+  approveAs: (id: string) => Promise<void>
   setCell: (actor: string, resource: ResourceId, level: AccessLevel) => void
   discardDraft: () => void
   saveDraft: () => void
@@ -108,26 +112,31 @@ export type DemoActions = {
   setSidebar: (v: boolean) => void
   readNotifications: () => void
   addAudit: (e: AuditEntry) => void
+  sendForReview: () => void
 }
 
 const INITIAL: DemoState = {
   hydrated: false,
-  intakePhase: "idle",
+  requestPhase: "idle",
+  scan: "idle",
+  scanSystems: 0,
+  scanFiles: 0,
+  plan: { needs: [], ask: [], never: [] },
+  people: {},
   transcript: [],
-  interviewees: { dana: "scheduled", marcus: "scheduled", priya: "scheduled", sam: "scheduled", chris: "scheduled", planning: "scheduled" },
-  readiness: "idle",
-  people: [],
-  workflows: [],
   openQuestions: {},
-  brainVisible: false,
-  brainMerged: 0,
-  brainPolicies: [],
+  lanes: [],
+  lanePolicies: {},
   nodes: {},
   edges: [],
   policies: [],
-  progress: BRAIN.before,
-  mergeStatus: "open",
-  mergePct: 0,
+  agents: [],
+  liveAgents: [],
+  progress: METER.before,
+  crStatus: "open",
+  crPct: 0,
+  approvals: [],
+  milestonesDone: [],
   matrix: INITIAL_MATRIX,
   draft: null,
   runPhase: "idle",
@@ -136,6 +145,7 @@ const INITIAL: DemoState = {
   briefOrder: [],
   briefShown: {},
   hoverStep: null,
+  sentForReview: false,
   extraAudit: [],
   viewAs: "dana",
   rec: false,
@@ -145,13 +155,19 @@ const INITIAL: DemoState = {
 }
 
 // Players live outside the persisted state.
-let intakePlayer: TimelinePlayer | null = null
+let requestPlayer: TimelinePlayer | null = null
 let runPlayer: TimelinePlayer | null = null
 
 function reduceEvent(s: DemoState, e: TimelineEvent): Partial<DemoState> {
   switch (e.type) {
-    case "interviewee":
-      return { interviewees: { ...s.interviewees, [e.id]: e.status } }
+    case "scan":
+      return e.status === "running" ? { scan: "running", scanSystems: 0, scanFiles: 0 } : { scan: "done" }
+    case "scan:progress":
+      return { scanSystems: e.systems, scanFiles: e.files }
+    case "plan:add":
+      return s.plan[e.column].includes(e.id) ? {} : { plan: { ...s.plan, [e.column]: [...s.plan[e.column], e.id] } }
+    case "person":
+      return { people: { ...s.people, [e.id]: e.status } }
     case "entry:add":
       return s.transcript.some((x) => x.id === e.entry.id) ? {} : { transcript: [...s.transcript, e.entry] }
     case "entry:progress":
@@ -159,59 +175,42 @@ function reduceEvent(s: DemoState, e: TimelineEvent): Partial<DemoState> {
     case "entry:done":
       return { transcript: s.transcript.map((x) => (x.id === e.id ? { ...x, shown: x.text.length, done: true } : x)) }
     case "chip:add":
-      return {
-        transcript: s.transcript.map((x) => (x.id === e.entryId && !x.chips.some((c) => c.id === e.chip.id) ? { ...x, chips: [...x.chips, e.chip] } : x)),
-      }
-    case "workflow:add":
-      return s.workflows.includes(e.id) ? {} : { workflows: [...s.workflows, e.id] }
+      return { transcript: s.transcript.map((x) => (x.id === e.entryId && !x.chips.some((c) => c.id === e.chip.id) ? { ...x, chips: [...x.chips, e.chip] } : x)) }
     case "question:add":
       return { openQuestions: { ...s.openQuestions, [e.id]: "open" } }
-    case "question:resolve":
-      return { openQuestions: { ...s.openQuestions, [e.id]: "resolved" } }
-    case "person:add":
-      return s.people.includes(e.id) ? {} : { people: [...s.people, e.id] }
-    case "readiness":
-      return { readiness: e.status }
     case "progress":
       return { progress: e.value }
-    case "intake:done":
-      return { intakePhase: "done" }
+    case "request:done":
+      return { requestPhase: "done" }
     case "canvas": {
       const ev = e.event
       switch (ev.type) {
-        case "brain:show":
-          return { brainVisible: true }
+        case "lane:add":
+          return s.lanes.includes(ev.id) ? {} : { lanes: [...s.lanes, ev.id] }
         case "source:add":
-          return { nodes: { ...s.nodes, [ev.id]: { verdict: ev.verdict ?? "unchecked", noOwner: ev.noOwner, policies: s.nodes[ev.id]?.policies ?? [] } } }
+          return { nodes: { ...s.nodes, [ev.id]: { verdict: ev.verdict ?? "unchecked" } } }
         case "placeholder:add":
-          return { nodes: { ...s.nodes, [ev.id]: { verdict: "unchecked", placeholder: { label: ev.label, hint: ev.hint }, policies: [] } } }
-        case "placeholder:resolve": {
-          const n = s.nodes[ev.id]
-          return { nodes: { ...s.nodes, [ev.id]: { verdict: "unchecked", policies: n?.policies ?? [] } } }
-        }
-        case "edge:add":
-          return s.edges.includes(ev.id) ? {} : { edges: [...s.edges, ev.id] }
-        case "policy:add": {
-          const p = POLICY_BY_ID[ev.id]
-          const nodes = { ...s.nodes }
-          for (const g of p.governs) {
-            if (g === "brain") continue
-            const n = nodes[g]
-            if (n && !n.policies.includes(ev.id)) nodes[g] = { ...n, policies: [...n.policies, ev.id] }
-          }
-          return {
-            policies: s.policies.includes(ev.id) ? s.policies : [...s.policies, ev.id],
-            brainPolicies: p.governs.includes("brain") && !s.brainPolicies.includes(ev.id) ? [...s.brainPolicies, ev.id] : s.brainPolicies,
-            nodes,
-          }
-        }
+          return { nodes: { ...s.nodes, [ev.id]: { verdict: "unchecked", placeholder: { label: ev.label, hint: ev.hint } } } }
+        case "placeholder:resolve":
+          return { nodes: { ...s.nodes, [ev.id]: { verdict: ev.verdict } } }
         case "verdict:set": {
           const n = s.nodes[ev.id]
           if (!n) return {}
           return { nodes: { ...s.nodes, [ev.id]: { ...n, verdict: ev.verdict } } }
         }
-        case "brain:fill":
-          return { brainMerged: ev.merged }
+        case "edge:add":
+          return s.edges.includes(ev.id) ? {} : { edges: [...s.edges, ev.id] }
+        case "policy:add": {
+          const p = POLICY_BY_ID[ev.id]
+          const lanePolicies = { ...s.lanePolicies }
+          for (const l of p.governsLanes) {
+            const cur = lanePolicies[l] ?? []
+            if (!cur.includes(ev.id)) lanePolicies[l] = [...cur, ev.id]
+          }
+          return { policies: s.policies.includes(ev.id) ? s.policies : [...s.policies, ev.id], lanePolicies }
+        }
+        case "agent:add":
+          return s.agents.includes(ev.id) ? {} : { agents: [...s.agents, ev.id] }
       }
       return {}
     }
@@ -229,8 +228,8 @@ function reduceEvent(s: DemoState, e: TimelineEvent): Partial<DemoState> {
   return {}
 }
 
-const INTAKE_KEYS: (keyof DemoState)[] = ["intakePhase", "transcript", "interviewees", "readiness", "people", "workflows", "openQuestions", "brainVisible", "brainMerged", "brainPolicies", "nodes", "edges", "policies", "progress"]
-const RUN_KEYS: (keyof DemoState)[] = ["runPhase", "traceShown", "blockedPulse", "briefOrder", "briefShown", "hoverStep"]
+const REQUEST_KEYS: (keyof DemoState)[] = ["requestPhase", "scan", "scanSystems", "scanFiles", "plan", "people", "transcript", "openQuestions", "lanes", "lanePolicies", "nodes", "edges", "policies", "agents", "progress"]
+const RUN_KEYS: (keyof DemoState)[] = ["runPhase", "traceShown", "blockedPulse", "briefOrder", "briefShown", "hoverStep", "sentForReview"]
 
 function pick(keys: (keyof DemoState)[]): Partial<DemoState> {
   const out: Partial<DemoState> = {}
@@ -250,39 +249,41 @@ export const useDemo = create<DemoState & DemoActions>()(
       applyEvent: (e) => set((s) => reduceEvent(s, e)),
 
       reset: () => {
-        intakePlayer?.stop()
+        requestPlayer?.stop()
         runPlayer?.stop()
-        intakePlayer = null
+        requestPlayer = null
         runPlayer = null
         const { rec, sidebarCollapsed, speed } = get()
         set({ ...INITIAL, hydrated: true, rec, sidebarCollapsed, speed: rec ? 1.5 : speed })
       },
 
-      startIntake: () => {
+      startRequest: () => {
         const s = get()
-        if (s.intakePhase === "playing") return
-        intakePlayer?.stop()
-        set({ ...pick(INTAKE_KEYS), intakePhase: "playing" })
-        intakePlayer = new TimelinePlayer(buildIntakeTimeline(), (e) => get().applyEvent(e), {
+        if (s.requestPhase === "playing") return
+        requestPlayer?.stop()
+        // A re-run keeps the meter and the live agent where CR-7 left them.
+        const keepProgress = s.crStatus === "merged" ? { progress: METER.after } : {}
+        set({ ...pick(REQUEST_KEYS), ...keepProgress, requestPhase: "playing" })
+        requestPlayer = new TimelinePlayer(buildRequestTimeline(), (e) => get().applyEvent(e), {
           speed: () => get().speed,
           onStatus: (st) => {
-            if (st === "done") return // intake:done event sets the phase
-            set({ intakePhase: statusToPhase(st) })
+            if (st === "done") return // request:done sets the phase
+            set({ requestPhase: statusToPhase(st) })
           },
         })
-        intakePlayer.start()
+        requestPlayer.start()
       },
-      pauseIntake: () => intakePlayer?.pause(),
-      resumeIntake: () => intakePlayer?.resume(),
-      skipIntake: () => {
+      pauseRequest: () => requestPlayer?.pause(),
+      resumeRequest: () => requestPlayer?.resume(),
+      skipRequest: () => {
         const s = get()
-        if (s.intakePhase === "done") return
-        if (!intakePlayer) {
-          set({ ...pick(INTAKE_KEYS), intakePhase: "playing" })
-          intakePlayer = new TimelinePlayer(buildIntakeTimeline(), (e) => get().applyEvent(e))
+        if (s.requestPhase === "done") return
+        if (!requestPlayer) {
+          set({ ...pick(REQUEST_KEYS), requestPhase: "playing" })
+          requestPlayer = new TimelinePlayer(buildRequestTimeline(), (e) => get().applyEvent(e))
         }
-        intakePlayer.skipToEnd()
-        set({ intakePhase: "done" })
+        requestPlayer.skipToEnd()
+        set({ requestPhase: "done", progress: get().crStatus === "merged" ? METER.after : METER.before })
       },
 
       startRun: () => {
@@ -294,18 +295,15 @@ export const useDemo = create<DemoState & DemoActions>()(
           speed: () => get().speed,
           onStatus: (st) => {
             if (st === "done") {
-              const { extraAudit } = get()
-              if (!extraAudit.some((a) => a.id === "A-2035")) {
-                get().addAudit({
-                  id: "A-2035",
-                  at: new Date(NOW.getTime() + 60_000),
-                  actorId: "marcus-assistant",
-                  kind: "blocked",
-                  text: "blocked: compare with similar households · policy advisor-scope · brief delivered with 5 citations",
-                  path: "policy://advisor-scope → audit/A-2035",
-                  href: href("/agents/marcus-assistant"),
-                })
-              }
+              get().addAudit({
+                id: "A-0124",
+                at: new Date(NOW.getTime() + 4 * 60_000),
+                actorId: "atlas-memo-agent",
+                kind: "blocked",
+                text: "blocked: pull comparable deal metrics from Project Birch · policy deal-data-within-deal · draft returned with 23 citations",
+                path: "datasite://birch/** → denied at Datasite group",
+                href: href("/agents/atlas-memo-agent"),
+              })
               return
             }
             set({ runPhase: statusToPhase(st) })
@@ -318,8 +316,8 @@ export const useDemo = create<DemoState & DemoActions>()(
 
       togglePause: () => {
         const s = get()
-        if (s.intakePhase === "playing" || s.intakePhase === "paused") {
-          intakePlayer?.toggle()
+        if (s.requestPhase === "playing" || s.requestPhase === "paused") {
+          requestPlayer?.toggle()
           return true
         }
         if (s.runPhase === "playing" || s.runPhase === "paused") {
@@ -329,28 +327,48 @@ export const useDemo = create<DemoState & DemoActions>()(
         return false
       },
 
-      approveMerge: async () => {
+      approveAs: async (id) => {
         const s = get()
-        if (s.mergeStatus !== "open") return
-        set({ mergeStatus: "merging", mergePct: 0 })
-        await runProgress(1200, (pct) => set({ mergePct: pct }))
-        const nodes = { ...get().nodes }
-        for (const id of MR14_SOURCES) {
-          const n = nodes[id]
-          if (n) nodes[id] = { ...n, verdict: "inbrain" }
-        }
-        const edges = [...get().edges]
-        for (const id of MR14_SOURCES) if (!edges.includes(`${id}>brain`)) edges.push(`${id}>brain`)
-        set({ mergeStatus: "merged", mergePct: 100, nodes, edges, brainMerged: BRAIN.mergedAfter, progress: BRAIN.after })
+        if (s.crStatus !== "open" || s.approvals.includes(id)) return
+        const approvals = [...s.approvals, id]
+        const approver = CR.approvers.find((a) => a.id === id)
+        set({ approvals })
         get().addAudit({
-          id: "A-2036",
-          at: new Date(NOW.getTime() + 120_000),
-          actorId: "dana",
-          kind: "merge",
-          text: `approved and merged MR-${MR.number} · ${MR.stats.merged.toLocaleString("en-US")} records into the firm brain, ${MR.stats.held} held`,
-          href: href("/build/mr-14"),
+          id: `A-012${approvals.length}`,
+          at: new Date(NOW.getTime() + approvals.length * 60_000),
+          actorId: id,
+          kind: "approve",
+          text: `approved CR-${CR.number} as ${approver?.role.toLowerCase() ?? "approver"} · ${approvals.length} of ${CR.approvers.length}`,
+          href: href("/connections/cr-7"),
         })
-        toast.success(`MR-${MR.number} merged`, { description: `2,184 records in the brain. 37 held for you. Firm in the brain ${BRAIN.before}% → ${BRAIN.after}%.` })
+        if (approvals.length < CR.approvers.length) {
+          toast(`Approved as ${approver ? approver.id === "ellen" ? "Ellen Marsh" : "Grace Liu" : id}`, { description: `${approvals.length} of ${CR.approvers.length} approvals. Waiting on the ${approvals.length === 1 ? "CCO" : "deal partner"}.` })
+          return
+        }
+        set({ crStatus: "merging", crPct: 0 })
+        await runProgress(1200, (pct) => set({ crPct: pct }))
+        const edges = [...get().edges]
+        for (const src of CR.sources) {
+          const id = `${CR.agentId}>${src}`
+          if (!edges.includes(id)) edges.push(id)
+        }
+        set({
+          crStatus: "merged",
+          crPct: 100,
+          edges,
+          liveAgents: [...new Set([...get().liveAgents, CR.agentId])],
+          progress: METER.after,
+          milestonesDone: [...new Set([...get().milestonesDone, "d15"])],
+        })
+        get().addAudit({
+          id: "A-0123",
+          at: new Date(NOW.getTime() + 3 * 60_000),
+          actorId: "grace",
+          kind: "connect",
+          text: `merged CR-${CR.number} · atlas-memo-agent connected to 4 Atlas sources, enforced at Datasite, SharePoint and DealCloud`,
+          href: href("/connections/cr-7"),
+        })
+        toast.success(`CR-${CR.number} merged`, { description: `atlas-memo-agent is live on Project Atlas. Firm AI-ready ${METER.before}% → ${METER.after}%. Day 15 milestone checked.` })
       },
 
       setCell: (actor, resource, level) => {
@@ -368,14 +386,14 @@ export const useDemo = create<DemoState & DemoActions>()(
         for (const a of Object.keys(s.draft)) for (const r of Object.keys(s.draft[a])) if (s.draft[a][r as ResourceId] !== s.matrix[a][r as ResourceId]) changed++
         set({ matrix: s.draft, draft: null })
         get().addAudit({
-          id: `A-${2037 + s.extraAudit.length}`,
-          at: new Date(NOW.getTime() + 180_000),
+          id: `A-013${s.extraAudit.length}`,
+          at: new Date(NOW.getTime() + 5 * 60_000),
           actorId: "dana",
           kind: "policy",
-          text: `changed ${changed} permission${changed === 1 ? "" : "s"} · enforced at the data layer immediately`,
-          href: href("/permissions"),
+          text: `changed ${changed} access rule${changed === 1 ? "" : "s"} · enforced at the source on save`,
+          href: href("/policies"),
         })
-        toast.success("Policy saved", { description: `${changed} change${changed === 1 ? "" : "s"} enforced at the data layer. Logged to the audit trail.` })
+        toast.success("Policy saved", { description: `${changed} change${changed === 1 ? "" : "s"} pushed to Datasite, SharePoint and DealCloud. Logged to the audit trail.` })
       },
 
       setHover: (n) => set({ hoverStep: n }),
@@ -384,55 +402,63 @@ export const useDemo = create<DemoState & DemoActions>()(
       toggleRec: () => get().setRec(!get().rec),
       setSpeed: (speed) => {
         set({ speed })
-        intakePlayer?.retime()
+        requestPlayer?.retime()
         runPlayer?.retime()
       },
       setSidebar: (v) => set({ sidebarCollapsed: v }),
       readNotifications: () => set({ notificationsRead: true }),
       addAudit: (e) => set((s) => (s.extraAudit.some((x) => x.id === e.id) ? {} : { extraAudit: [e, ...s.extraAudit] })),
+      sendForReview: () => {
+        if (get().sentForReview) return
+        set({ sentForReview: true })
+        toast.success("Sent to the Atlas deal team", { description: "Ellen Marsh, Tom Becker and Nina Alvarez have the draft with every citation. Nothing was written to the data room." })
+      },
     }),
     {
-      name: "enakt-ashcombe-demo-v1",
+      name: "enakt-calloway-demo-v1",
       storage: createJSONStorage(() => sessionStorage, {
         reviver: (k, v) => (k === "at" && typeof v === "string" ? new Date(v) : v),
       }),
       skipHydration: true,
       partialize: (s) => {
-        const { hydrated: _h, hoverStep: _hs, blockedPulse: _bp, mergePct: _mp, ...rest } = s
+        const { hydrated: _h, hoverStep: _hs, blockedPulse: _bp, crPct: _cp, ...rest } = s
         void _h
         void _hs
         void _bp
-        void _mp
+        void _cp
         return rest as unknown as DemoState
       },
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<DemoState>
         const next: DemoState & DemoActions = { ...current, ...p, hydrated: true }
         // A reload mid-script lands on the finished state. Nothing is half-done.
-        if (next.intakePhase === "playing" || next.intakePhase === "paused") {
-          let s: DemoState = { ...next, ...pick(INTAKE_KEYS) }
-          for (const e of buildIntakeTimeline()) s = { ...s, ...reduceEvent(s, e) }
-          Object.assign(next, s, { intakePhase: "done" })
+        if (next.requestPhase === "playing" || next.requestPhase === "paused") {
+          let s: DemoState = { ...next, ...pick(REQUEST_KEYS) }
+          for (const e of buildRequestTimeline()) s = { ...s, ...reduceEvent(s, e) }
+          Object.assign(next, s, { requestPhase: "done", progress: next.crStatus === "merged" ? METER.after : METER.before })
         }
         if (next.runPhase === "playing" || next.runPhase === "paused") {
           let s: DemoState = { ...next, ...pick(RUN_KEYS) }
           for (const e of buildRunTimeline()) s = { ...s, ...reduceEvent(s, e) }
           Object.assign(next, s, { runPhase: "done" })
         }
-        if (next.mergeStatus === "merging") next.mergeStatus = "open"
+        if (next.crStatus === "merging") {
+          next.crStatus = "open"
+          next.approvals = next.approvals.slice(0, 1)
+        }
         return next
       },
     },
   ),
 )
 
-/** Finished intake, derived from the state. */
-export const selectIntakeDone = (s: DemoState) => s.intakePhase === "done"
+/** Finished request scene, derived from the state. */
+export const selectRequestDone = (s: DemoState) => s.requestPhase === "done"
 
 /** All audit entries, newest first. */
 export const selectAudit = (s: DemoState): AuditEntry[] => [...s.extraAudit, ...AUDIT]
 
-/** Sources discovered on the canvas, in fixture order. */
+/** Sources on the canvas, in fixture order. */
 export const selectDiscovered = (s: DemoState) => SOURCES.filter((src) => s.nodes[src.id] && !s.nodes[src.id]?.placeholder)
 
 export { NOW }

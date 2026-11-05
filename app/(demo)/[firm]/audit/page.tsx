@@ -13,12 +13,13 @@ import { absoluteTime, fmtInt, relativeTime } from "@/lib/demo/format"
 import { useDemo } from "@/lib/demo/store"
 import { cn } from "@/lib/utils"
 
-type Filter = "all" | "people" | "agents" | "blocked"
+type Filter = "all" | "people" | "agents" | "blocked" | "approvals"
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "people", label: "People" },
   { id: "agents", label: "Agents" },
   { id: "blocked", label: "Blocked" },
+  { id: "approvals", label: "Approvals" },
 ]
 
 export default function AuditPage() {
@@ -34,6 +35,7 @@ export default function AuditPage() {
       if (filter === "people" && actor.kind === "agent") return false
       if (filter === "agents" && actor.kind !== "agent") return false
       if (filter === "blocked" && a.kind !== "blocked") return false
+      if (filter === "approvals" && a.kind !== "approve" && a.kind !== "connect") return false
       if (!needle) return true
       return `${a.id} ${actor.name} ${a.text} ${a.path ?? ""}`.toLowerCase().includes(needle)
     })
@@ -41,17 +43,12 @@ export default function AuditPage() {
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
-      <PageHeader title="Audit log" description="Every read, merge, policy change and block, by people and agents. Kept inside the network." />
+      <PageHeader title="Audit log" description="Every read, block, approval and policy change, by people and agents. Kept in the Calloway Hill tenant." />
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-md border bg-card p-0.5 shadow-sm">
           {FILTERS.map((f) => (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              aria-pressed={filter === f.id}
-              className={cn("h-7 rounded px-2.5 text-xs font-medium transition-colors", filter === f.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground")}
-            >
+            <button key={f.id} onClick={() => setFilter(f.id)} aria-pressed={filter === f.id} className={cn("h-7 rounded px-2.5 text-xs font-medium transition-colors", filter === f.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground")}>
               {f.label}
             </button>
           ))}
@@ -72,7 +69,7 @@ export default function AuditPage() {
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-[170px]">Time</TableHead>
-                <TableHead className="w-[270px]">Actor</TableHead>
+                <TableHead className="w-[250px]">Actor</TableHead>
                 <TableHead>Event</TableHead>
                 <TableHead className="w-[280px]">Path</TableHead>
               </TableRow>
@@ -93,15 +90,19 @@ export default function AuditPage() {
                   <TableCell className="align-top">
                     <div className="flex items-start gap-2">
                       {a.kind === "blocked" && <Badge variant="abort">Blocked</Badge>}
-                      {a.kind === "merge" && <Badge variant="merged">Merge</Badge>}
-                      {a.kind === "policy" && <Badge variant="signal">Policy</Badge>}
+                      {a.kind === "approve" && <Badge variant="verified">Approval</Badge>}
+                      {a.kind === "connect" && <Badge variant="signal">Connection</Badge>}
+                      {a.kind === "policy" && <Badge variant="merged">Policy</Badge>}
+                      {a.kind === "request" && <Badge variant="outline">Request</Badge>}
                       <span className={cn("text-sm leading-5", a.kind === "blocked" && "text-abort")}>{a.text}</span>
                     </div>
                     <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">{a.id}</div>
                   </TableCell>
                   <TableCell className="align-top">
                     {a.path ? (
-                      <span className="break-all font-mono text-[11px] text-muted-foreground">{a.path}</span>
+                      <span className="break-all font-mono text-[11px] text-muted-foreground" title={a.path}>
+                        {a.path}
+                      </span>
                     ) : a.href ? (
                       <Link href={a.href} className="text-xs text-signal underline-offset-4 hover:underline">
                         Open
@@ -117,7 +118,7 @@ export default function AuditPage() {
         )}
         <div className="flex items-center gap-2 border-t bg-muted/40 px-4 py-2.5 text-xs text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" />
-          Showing {fmtInt(rows.length)} of {fmtInt(all.length)} entries · retained 7 years · exported nightly to the Ashcombe archive share
+          Showing {fmtInt(rows.length)} of {fmtInt(all.length)} entries · retained 7 years · exported nightly to Calloway Hill&apos;s own storage account
         </div>
       </Card>
     </div>

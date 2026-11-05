@@ -1,59 +1,56 @@
 /**
- * The demo script as typed data: the interview beats, the readiness pass, the agent run.
- * `buildIntakeTimeline()` and `buildRunTimeline()` turn it into a flat list of timed events
+ * The demo script as typed data: the request scan, the scope plan, three clarifications, the agent run.
+ * `buildRequestTimeline()` and `buildRunTimeline()` turn it into a flat list of timed events
  * that `player.ts` plays and the store applies. Pure data in, pure data out: every take is identical.
  */
 
-import { BRAIN, BRIEF, IN_BRAIN_BEFORE, SOURCES, TRACE, type SourceId, type Verdict } from "./fixtures"
+import { BRIEF, SCAN, TRACE, type LaneId, type PlanColumn, type SourceId, type Verdict } from "./fixtures"
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-export type ChipKind = "source" | "workflow" | "policy" | "task" | "question"
+export type ChipKind = "source" | "cleanup" | "policy" | "question"
+/** Chip tone follows the status-pill token set: green / yellow / red / purple policy. */
 export type Chip = { id: string; kind: ChipKind; label: string; ref?: string }
 
 export type TranscriptEntry = {
   id: string
   beat: number
-  kind: "question" | "answer" | "system"
-  /** Who is speaking: "enakt" for questions and system lines, a person id for answers. */
+  kind: "question" | "answer"
+  /** "enakt" for questions, a person id for answers. */
   speaker: string
-  /** Who actually typed the answer. */
-  via?: "self" | "assistant" | "none"
   text: string
   shown: number
   done: boolean
   chips: Chip[]
-  tone?: "error" | "progress"
 }
 
 export type CanvasEvent =
-  | { type: "brain:show" }
-  | { type: "source:add"; id: SourceId; verdict?: Verdict; noOwner?: boolean }
+  | { type: "lane:add"; id: LaneId }
+  | { type: "source:add"; id: SourceId; verdict?: Verdict }
   | { type: "placeholder:add"; id: SourceId; label: string; hint: string }
-  | { type: "placeholder:resolve"; id: SourceId }
+  | { type: "placeholder:resolve"; id: SourceId; verdict: Verdict }
+  | { type: "verdict:set"; id: SourceId; verdict: Verdict }
   | { type: "edge:add"; id: string }
   | { type: "policy:add"; id: string }
-  | { type: "verdict:set"; id: SourceId; verdict: Verdict }
-  | { type: "brain:fill"; merged: number }
+  | { type: "agent:add"; id: string }
 
-export type IntervieweeStatus = "scheduled" | "interviewing" | "done" | "noresponse"
+export type PersonStatus = "waiting" | "asking" | "answered"
 
 export type TimelineEvent =
-  | { t: number; type: "interviewee"; id: string; status: IntervieweeStatus }
+  | { t: number; type: "scan"; status: "running" | "done" }
+  | { t: number; type: "scan:progress"; systems: number; files: number }
+  | { t: number; type: "plan:add"; column: PlanColumn; id: string }
+  | { t: number; type: "person"; id: string; status: PersonStatus }
   | { t: number; type: "entry:add"; entry: TranscriptEntry }
   | { t: number; type: "entry:progress"; id: string; shown: number }
   | { t: number; type: "entry:done"; id: string }
   | { t: number; type: "chip:add"; entryId: string; chip: Chip }
   | { t: number; type: "canvas"; event: CanvasEvent }
-  | { t: number; type: "workflow:add"; id: string }
   | { t: number; type: "question:add"; id: string }
-  | { t: number; type: "question:resolve"; id: string }
-  | { t: number; type: "person:add"; id: string }
-  | { t: number; type: "readiness"; status: "running" | "done" }
   | { t: number; type: "progress"; value: number }
-  | { t: number; type: "intake:done" }
+  | { t: number; type: "request:done" }
   // agent run
   | { t: number; type: "trace:step"; n: number }
   | { t: number; type: "trace:pulse"; n: number }
@@ -62,16 +59,14 @@ export type TimelineEvent =
   | { t: number; type: "run:done" }
 
 // ---------------------------------------------------------------------------
-// Interview beats
+// Clarification beats
 // ---------------------------------------------------------------------------
 
 export type Beat = {
   n: number
   person: string
-  via: "self" | "assistant" | "none"
   question: string
   answer: string
-  answerTone?: "error"
   chips: Chip[]
   /** Fired after the chips, in order, with a short stagger. */
   events: TimelineEvent[]
@@ -83,98 +78,36 @@ const cv = (event: CanvasEvent): TimelineEvent => ({ t: 0, type: "canvas", event
 export const BEATS: Beat[] = [
   {
     n: 1,
-    person: "dana",
-    via: "self",
-    question: "Where do client records live today, and who keeps them current?",
-    answer: "Salesforce is our main client record. I own it. New clients start in a SharePoint onboarding list, and scanned documents sit on the file share.",
-    chips: [c("source", "Salesforce CRM", "salesforce-crm"), c("source", "Onboarding (SharePoint)", "onboarding"), c("source", "Client documents (file share)", "client-docs"), c("workflow", "Client onboarding", "onboarding")],
+    person: "nina",
+    question: "Which Atlas model is current?",
+    answer: "v7. v6 is dead but the memo draft still links it.",
+    chips: [c("source", "Atlas_Model_v7", "atlas-model-v7"), c("cleanup", "retire v6 link", "atlas-model-v6")],
     events: [
-      cv({ type: "source:add", id: "salesforce-crm" }),
-      cv({ type: "source:add", id: "onboarding" }),
-      cv({ type: "source:add", id: "client-docs" }),
-      cv({ type: "edge:add", id: "onboarding>salesforce-crm" }),
-      { t: 0, type: "workflow:add", id: "onboarding" },
+      cv({ type: "placeholder:resolve", id: "atlas-model-v7", verdict: "ready" }),
+      cv({ type: "edge:add", id: "atlas-memo-agent>atlas-model-v7" }),
+      cv({ type: "source:add", id: "atlas-model-v6", verdict: "attention" }),
+      cv({ type: "edge:add", id: "atlas-model-v6>atlas-model-v7" }),
     ],
   },
   {
     n: 2,
-    person: "dana",
-    via: "self",
-    question: "You said Salesforce is the main record. Does anyone keep client information outside it?",
-    answer: "Advisors do. Marcus has his own tracker. You should ask him.",
-    chips: [c("question", "Marcus's tracker → routed to Marcus Lee", "marcus-tracker")],
-    events: [{ t: 0, type: "question:add", id: "marcus-tracker" }, cv({ type: "placeholder:add", id: "client-tracker", label: "Unknown advisor tracker", hint: "Ask Marcus Lee" })],
+    person: "tom",
+    question: "Can Atlas materials be used for anything outside Atlas?",
+    answer: "No. The seller NDA limits use to evaluating the deal. Same for Birch on their side.",
+    chips: [c("policy", "deal data used only within its deal", "deal-data-within-deal"), c("policy", "Birch NDA", "birch-nda")],
+    events: [cv({ type: "policy:add", id: "deal-data-within-deal" }), cv({ type: "policy:add", id: "birch-nda" })],
   },
   {
     n: 3,
-    person: "marcus",
-    via: "assistant",
-    question: "What do you do before a client review, and what should your assistant never see?",
-    answer:
-      "I pull the CRM, my own tracker, and their documents. My tracker is Client_Tracker_FINAL_v3, plus an old prospects sheet. My assistant should only ever see my own households, never another advisor's clients.",
-    chips: [c("source", "Client_Tracker_FINAL_v3", "client-tracker"), c("source", "Prospects_2025.xlsx", "prospects"), c("workflow", "Client review prep", "review-prep"), c("policy", "Advisor assistants see only their advisor's households", "advisor-scope")],
-    events: [
-      cv({ type: "placeholder:resolve", id: "client-tracker" }),
-      { t: 0, type: "question:resolve", id: "marcus-tracker" },
-      cv({ type: "source:add", id: "prospects" }),
-      cv({ type: "edge:add", id: "salesforce-crm>client-tracker" }),
-      { t: 0, type: "workflow:add", id: "review-prep" },
-      cv({ type: "policy:add", id: "advisor-scope" }),
-    ],
-  },
-  {
-    n: 4,
-    person: "priya",
-    via: "self",
-    question: "Where do AUM numbers come from, and how often do they change?",
-    answer: "The custodian sends a nightly export. I roll it up monthly in AUM_Rollup on the shared drive, and billing runs off that.",
-    chips: [c("source", "Custodian feed", "custodian-feed"), c("source", "AUM_Rollup.xlsx", "aum-rollup"), c("source", "Billing (SQL Server)", "billing"), c("workflow", "Monthly AUM rollup", "aum-rollup"), c("workflow", "Billing run", "billing-run")],
-    events: [
-      cv({ type: "source:add", id: "custodian-feed" }),
-      cv({ type: "source:add", id: "aum-rollup" }),
-      cv({ type: "source:add", id: "billing" }),
-      cv({ type: "edge:add", id: "custodian-feed>aum-rollup" }),
-      cv({ type: "edge:add", id: "aum-rollup>billing" }),
-      { t: 0, type: "workflow:add", id: "aum-rollup" },
-      { t: 0, type: "workflow:add", id: "billing-run" },
-    ],
-  },
-  {
-    n: 5,
-    person: "sam",
-    via: "self",
-    question: "Which data is regulated, and who is allowed to touch it?",
-    answer: "KYC records in Oracle and our compliance log in Postgres. Only compliance reads KYC, people or agents.",
-    chips: [c("source", "KYC records", "kyc"), c("source", "Compliance log", "compliance-log"), c("policy", "Only compliance reads KYC records", "kyc-compliance")],
-    events: [cv({ type: "source:add", id: "kyc" }), cv({ type: "source:add", id: "compliance-log" }), cv({ type: "policy:add", id: "kyc-compliance" })],
-  },
-  {
-    n: 6,
-    person: "chris",
-    via: "self",
-    question: "Is there anything only leadership should see?",
-    answer: "Advisor compensation. It's in a restricted spreadsheet and no AI goes near it.",
-    chips: [c("source", "Advisor_Comp.xlsx", "advisor-comp"), c("policy", "Advisor compensation is leadership only, no agents", "comp-leadership")],
-    events: [cv({ type: "source:add", id: "advisor-comp", verdict: "restricted" }), cv({ type: "policy:add", id: "comp-leadership" })],
-  },
-  {
-    n: 7,
-    person: "planning",
-    via: "none",
-    question: "How are planning cases tracked and updated?",
-    answer: "No response after 2 reminders. Logged as an open question for Chris Hale.",
-    answerTone: "error",
-    chips: [c("source", "Planning cases (Access database)", "planning-cases"), c("question", "Needs an owner", "planning-owner")],
-    events: [cv({ type: "source:add", id: "planning-cases", verdict: "unverified", noOwner: true }), { t: 0, type: "question:add", id: "planning-owner" }],
+    person: "nina",
+    question: "Which revenue figure should the memo lead with?",
+    answer: "Monthly P&L, but flag the CIM number, they don't tie yet.",
+    chips: [c("question", "TTM revenue conflict", "ttm-revenue")],
+    events: [cv({ type: "verdict:set", id: "atlas-dataroom", verdict: "conflict" }), { t: 0, type: "question:add", id: "ttm-revenue" }],
   },
 ]
 
-export const READINESS_LINE = "Checking freshness and consistency from metadata and row counts…"
-
-/** Verdict cascade order for the readiness pass (beat 8). */
-export const READINESS_ORDER: SourceId[] = ["custodian-feed", "compliance-log", "onboarding", "billing", "client-docs", "kyc", "salesforce-crm", "aum-rollup", "client-tracker", "prospects", "planning-cases", "advisor-comp"]
-
-export const INTAKE_BANNER = "Intake complete · 12 sources · 6 people · 4 workflows · 3 policies · 1 open question · 0 rows read"
+export const REQUEST_BANNER = "Scope plan ready · 4 sources · 2 people asked · 2 policies · 1 open question · 0 rows read"
 
 // ---------------------------------------------------------------------------
 // Timing
@@ -182,17 +115,18 @@ export const INTAKE_BANNER = "Intake complete · 12 sources · 6 people · 4 wor
 
 export const TIMING = {
   /** Characters per second for streamed answers. */
-  cps: 35,
-  questionPause: 650,
-  afterQuestion: 500,
+  cps: 38,
+  questionPause: 600,
+  afterQuestion: 450,
   chipStagger: 230,
   eventStagger: 140,
-  betweenBeats: 550,
-  readinessShimmer: 2000,
-  cascade: 120,
+  betweenBeats: 500,
+  planStagger: 240,
+  scanTicks: 14,
+  scanTick: 130,
   tracePause: 520,
   traceBlockedPause: 1100,
-  briefCps: 110,
+  briefCps: 120,
 }
 
 /** Split text into display tokens: words with trailing whitespace kept attached. */
@@ -212,39 +146,82 @@ function streamEvents(out: TimelineEvent[], id: string, text: string, t: number,
 }
 
 // ---------------------------------------------------------------------------
-// Intake timeline
+// Request timeline: scan → scope plan → clarifications → scan complete
 // ---------------------------------------------------------------------------
 
-export function buildIntakeTimeline(): TimelineEvent[] {
+export function buildRequestTimeline(): TimelineEvent[] {
   const out: TimelineEvent[] = []
   let t = 0
   const push = (e: TimelineEvent, at = t) => out.push({ ...e, t: at })
 
-  push({ t, type: "canvas", event: { type: "brain:show" } })
-  t += 400
+  // Scan starts; the counters climb while the lanes and the first nodes land.
+  push({ t, type: "scan", status: "running" })
+  for (let i = 1; i <= TIMING.scanTicks; i++) {
+    const f = i / TIMING.scanTicks
+    const eased = 1 - Math.pow(1 - f, 2)
+    push({ t: t + i * TIMING.scanTick, type: "scan:progress", systems: Math.min(SCAN.systems, Math.ceil(f * SCAN.systems)), files: Math.round(eased * SCAN.files) })
+  }
+  t += 240
+  push({ t, type: "canvas", event: { type: "lane:add", id: "atlas" } })
+  t += 160
+  push({ t, type: "canvas", event: { type: "lane:add", id: "firmwide" } })
+  t += 160
+  push({ t, type: "canvas", event: { type: "agent:add", id: "atlas-memo-agent" } })
+  t += 320
 
+  // Needs
+  push({ t, type: "plan:add", column: "needs", id: "needs-dataroom" })
+  push({ t, type: "canvas", event: { type: "source:add", id: "atlas-dataroom", verdict: "ready" } }, t + 80)
+  push({ t, type: "canvas", event: { type: "edge:add", id: "atlas-memo-agent>atlas-dataroom" } }, t + 200)
+  t += TIMING.planStagger
+  push({ t, type: "plan:add", column: "needs", id: "needs-model" })
+  push({ t, type: "canvas", event: { type: "placeholder:add", id: "atlas-model-v7", label: "Atlas model · which version?", hint: "Ask Nina Alvarez" } }, t + 80)
+  t += TIMING.planStagger
+  push({ t, type: "plan:add", column: "needs", id: "needs-record" })
+  push({ t, type: "canvas", event: { type: "source:add", id: "deal-records", verdict: "ready" } }, t + 80)
+  push({ t, type: "canvas", event: { type: "edge:add", id: "atlas-memo-agent>deal-records" } }, t + 200)
+  t += TIMING.planStagger
+  push({ t, type: "plan:add", column: "needs", id: "needs-template" })
+  push({ t, type: "canvas", event: { type: "source:add", id: "ic-template", verdict: "ready" } }, t + 80)
+  push({ t, type: "canvas", event: { type: "edge:add", id: "atlas-memo-agent>ic-template" } }, t + 200)
+  t += TIMING.planStagger + 120
+
+  // Ask
+  push({ t, type: "plan:add", column: "ask", id: "ask-tom" })
+  push({ t, type: "person", id: "tom", status: "waiting" })
+  t += TIMING.planStagger
+  push({ t, type: "plan:add", column: "ask", id: "ask-nina" })
+  push({ t, type: "person", id: "nina", status: "waiting" })
+  t += TIMING.planStagger + 120
+
+  // Never touches
+  push({ t, type: "plan:add", column: "never", id: "never-deals" })
+  push({ t, type: "canvas", event: { type: "lane:add", id: "birch" } }, t + 60)
+  push({ t, type: "canvas", event: { type: "source:add", id: "birch-dataroom", verdict: "restricted" } }, t + 180)
+  push({ t, type: "canvas", event: { type: "source:add", id: "birch-model", verdict: "restricted" } }, t + 300)
+  t += TIMING.planStagger + 120
+  push({ t, type: "plan:add", column: "never", id: "never-lp" })
+  push({ t, type: "canvas", event: { type: "lane:add", id: "fundops" } }, t + 60)
+  push({ t, type: "canvas", event: { type: "source:add", id: "lp-database", verdict: "restricted" } }, t + 180)
+  t += TIMING.planStagger + 60
+  push({ t, type: "plan:add", column: "never", id: "never-fee" })
+  push({ t, type: "canvas", event: { type: "source:add", id: "fee-carry", verdict: "restricted" } }, t + 120)
+  t += TIMING.planStagger + 500
+
+  // Clarifications
   for (const b of BEATS) {
     const qid = `b${b.n}-q`
     const aid = `b${b.n}-a`
-    push({ t, type: "interviewee", id: b.person, status: "interviewing" })
+    push({ t, type: "person", id: b.person, status: "asking" })
     push({ t, type: "entry:add", entry: { id: qid, beat: b.n, kind: "question", speaker: "enakt", text: b.question, shown: b.question.length, done: true, chips: [] } })
     t += TIMING.questionPause
-    if (b.via === "none") {
-      t += 900
-      push({ t, type: "entry:add", entry: { id: aid, beat: b.n, kind: "system", speaker: "enakt", via: "none", text: b.answer, shown: b.answer.length, done: true, chips: [], tone: "error" } })
-      push({ t, type: "interviewee", id: b.person, status: "noresponse" })
-      t += 500
-    } else {
-      push({ t, type: "entry:add", entry: { id: aid, beat: b.n, kind: "answer", speaker: b.person, via: b.via, text: b.answer, shown: 0, done: false, chips: [] } })
-      t += TIMING.afterQuestion
-      t = streamEvents(out, aid, b.answer, t, TIMING.cps, "entry:progress")
-      t += 120
-      push({ t, type: "entry:done", id: aid })
-      push({ t, type: "interviewee", id: b.person, status: "done" })
-    }
-    push({ t, type: "person:add", id: b.person })
-    t += 260
-    // Chips land one by one; the matching canvas events fire alongside.
+    push({ t, type: "entry:add", entry: { id: aid, beat: b.n, kind: "answer", speaker: b.person, text: b.answer, shown: 0, done: false, chips: [] } })
+    t += TIMING.afterQuestion
+    t = streamEvents(out, aid, b.answer, t, TIMING.cps, "entry:progress")
+    t += 120
+    push({ t, type: "entry:done", id: aid })
+    push({ t, type: "person", id: b.person, status: "answered" })
+    t += 240
     for (const chip of b.chips) {
       push({ t, type: "chip:add", entryId: aid, chip })
       t += TIMING.chipStagger
@@ -257,22 +234,28 @@ export function buildIntakeTimeline(): TimelineEvent[] {
     t = Math.max(t, et) + TIMING.betweenBeats
   }
 
-  // Beat 8: readiness pass.
-  push({ t, type: "entry:add", entry: { id: "b8-s", beat: 8, kind: "system", speaker: "enakt", via: "none", text: READINESS_LINE, shown: READINESS_LINE.length, done: false, chips: [], tone: "progress" } })
-  push({ t, type: "readiness", status: "running" })
-  t += TIMING.readinessShimmer
-  for (const id of READINESS_ORDER) {
-    push({ t, type: "canvas", event: { type: "verdict:set", id, verdict: SOURCES.find((s) => s.id === id)!.verdict } })
-    if (IN_BRAIN_BEFORE.includes(id)) push({ t, type: "canvas", event: { type: "edge:add", id: `${id}>brain` } })
-    t += TIMING.cascade
-  }
-  t += 200
-  push({ t, type: "canvas", event: { type: "brain:fill", merged: BRAIN.mergedBefore } })
-  push({ t, type: "progress", value: BRAIN.before })
-  push({ t, type: "entry:done", id: "b8-s" })
-  push({ t, type: "readiness", status: "done" })
+  // Scan completes: the rest of the firm lands as scanned, out of scope.
+  push({ t, type: "canvas", event: { type: "lane:add", id: "portfolio" } })
+  t += 140
+  push({ t, type: "canvas", event: { type: "source:add", id: "kpi-pack", verdict: "attention" } })
+  t += 120
+  push({ t, type: "canvas", event: { type: "source:add", id: "board-decks", verdict: "ready" } })
+  t += 120
+  push({ t, type: "canvas", event: { type: "source:add", id: "deal-email", verdict: "attention" } })
+  t += 160
+  push({ t, type: "canvas", event: { type: "agent:add", id: "connect-agent" } })
+  t += 100
+  push({ t, type: "canvas", event: { type: "agent:add", id: "portfolio-kpi-agent" } })
+  push({ t, type: "canvas", event: { type: "edge:add", id: "portfolio-kpi-agent>kpi-pack" } }, t + 100)
+  push({ t, type: "canvas", event: { type: "edge:add", id: "portfolio-kpi-agent>board-decks" } }, t + 180)
+  t += 220
+  push({ t, type: "canvas", event: { type: "agent:add", id: "lp-letter-agent" } })
+  push({ t, type: "canvas", event: { type: "edge:add", id: "lp-letter-agent>lp-database" } }, t + 100)
+  t += 320
+  push({ t, type: "scan", status: "done" })
+  push({ t, type: "progress", value: 22 })
   t += 350
-  push({ t, type: "intake:done" })
+  push({ t, type: "request:done" })
   return out
 }
 
@@ -293,7 +276,7 @@ export function buildRunTimeline(): TimelineEvent[] {
       t += TIMING.tracePause
     }
   }
-  // The brief streams after step 7 lands.
+  // The brief streams after step 8 lands.
   t += 200
   for (const block of BRIEF) {
     out.push({ t, type: "brief:block", id: block.id })

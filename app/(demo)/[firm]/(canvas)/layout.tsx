@@ -3,20 +3,20 @@
 import * as React from "react"
 import { usePathname } from "next/navigation"
 import { motion } from "framer-motion"
-import { BrainCanvas } from "@/components/demo/brain-canvas"
+import { DealCanvas } from "@/components/demo/deal-canvas"
 import { CanvasSelectionProvider, useCanvasSelection } from "@/components/demo/canvas-context"
-import { IntakeCounters } from "@/components/demo/intake-counters"
+import { RequestCounters } from "@/components/demo/request-counters"
 
 function Frame({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const intake = pathname.includes("/intake")
+  const request = pathname.includes("/requests/")
   const { selected, setSelected, hiddenVerdicts } = useCanvasSelection()
 
   return (
     <div className="flex h-full min-h-0">
-      {intake && (
+      {request && (
         <motion.aside
-          key="intake-pane"
+          key="request-pane"
           initial={{ opacity: 0, x: -12 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
@@ -26,17 +26,17 @@ function Frame({ children }: { children: React.ReactNode }) {
         </motion.aside>
       )}
       <div className="relative flex min-w-0 flex-1 flex-col">
-        {intake && <IntakeCounters />}
+        {request && <RequestCounters />}
         <div className="relative min-h-0 flex-1">
-          <BrainCanvas mode={intake ? "intake" : "map"} selectedId={selected} onSelect={setSelected} hiddenVerdicts={hiddenVerdicts} padding={intake ? 0.12 : 0.16} />
-          {!intake && <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">{children}</div>}
+          <DealCanvas mode={request ? "request" : "map"} selectedId={selected} onSelect={setSelected} hiddenVerdicts={hiddenVerdicts} padding={request ? 0.1 : { top: "118px", bottom: "40px", left: "32px", right: "32px" }} />
+          {!request && <div className="pointer-events-none absolute inset-0 [&>*]:pointer-events-auto">{children}</div>}
         </div>
       </div>
     </div>
   )
 }
 
-/** Intake and Map share this layout so the React Flow canvas stays mounted across the two routes. */
+/** The request and the map share this layout so the React Flow canvas stays mounted across the two routes. */
 export default function CanvasLayout({ children }: { children: React.ReactNode }) {
   return (
     <CanvasSelectionProvider>

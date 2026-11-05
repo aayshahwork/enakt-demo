@@ -35,6 +35,7 @@ const config: Config = {
         display: ["var(--font-display)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
         logo: ["var(--font-display)", "system-ui", "sans-serif"],
+        serif: ["Iowan Old Style", "Palatino Linotype", "Book Antiqua", "Georgia", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

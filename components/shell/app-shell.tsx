@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Toaster, toast } from "sonner"
 import { useTheme } from "next-themes"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { BRAIN, href } from "@/lib/demo/fixtures"
+import { METER, href } from "@/lib/demo/fixtures"
 import { useDemo } from "@/lib/demo/store"
 import { cn } from "@/lib/utils"
 import { Sidebar } from "./sidebar"
@@ -13,13 +13,15 @@ import { Topbar } from "./topbar"
 import { CommandPalette } from "./command-palette"
 import { RouteTransition } from "./route-transition"
 
-const SHORTCUT_ROUTES: Record<string, string> = {
+export const SHORTCUT_ROUTES: Record<string, string> = {
   "1": href(),
-  "2": href("/intake"),
+  "2": href("/requests/r-3"),
   "3": href("/map"),
-  "4": href("/build"),
-  "5": href("/permissions"),
-  "6": href("/agents/marcus-assistant"),
+  "4": href("/readiness"),
+  "5": href("/connections/cr-7"),
+  "6": href("/policies"),
+  "7": href("/agents/atlas-memo-agent"),
+  "8": href("/rollout"),
 }
 
 function isTyping(target: EventTarget | null) {
@@ -29,7 +31,7 @@ function isTyping(target: EventTarget | null) {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || el.isContentEditable || !!el.closest("[cmdk-root]")
 }
 
-/** Global keys: 1–6 jump, Space pause/resume, Shift+R reset, Shift+F recording mode, Shift+D theme. */
+/** Global keys: 1–8 jump, Space pause/resume, Shift+R reset, Shift+F recording mode, Shift+D theme. */
 function KeyboardShortcuts() {
   const router = useRouter()
   const pathname = usePathname()
@@ -45,14 +47,14 @@ function KeyboardShortcuts() {
       if (e.shiftKey && e.key.toLowerCase() === "r") {
         e.preventDefault()
         reset()
-        toast("Demo reset", { description: `Canvas cleared, MR-14 reopened, brain back to ${BRAIN.before}%.` })
+        toast("Demo reset", { description: `Request submitted, canvas empty, CR-7 at 0 of 2, agent not run, meter at ${METER.before}%. Day 12.` })
         return
       }
       if (e.shiftKey && e.key.toLowerCase() === "f") {
         e.preventDefault()
         const next = !useDemo.getState().rec
         toggleRec()
-        toast(next ? "Recording mode on" : "Recording mode off", { description: next ? "Demo badge hidden, scripts at 1.5×." : "Scripts back to 1×." })
+        toast(next ? "Recording mode on" : "Recording mode off", { description: next ? "Synthetic-data note hidden, scripts at 1.5×." : "Scripts back to 1×." })
         return
       }
       if (e.shiftKey && e.key.toLowerCase() === "d") {
@@ -77,9 +79,7 @@ function KeyboardShortcuts() {
 
   React.useEffect(() => {
     Object.values(SHORTCUT_ROUTES).forEach((r) => router.prefetch(r))
-    router.prefetch(href("/build/mr-14"))
-    router.prefetch(href("/audit"))
-    router.prefetch(href("/settings"))
+    for (const r of ["/requests", "/connections", "/agents", "/audit", "/settings"]) router.prefetch(href(r))
   }, [router])
 
   return null

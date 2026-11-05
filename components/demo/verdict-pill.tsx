@@ -1,49 +1,38 @@
 import { Badge } from "@/components/ui/badge"
-import { VERDICT_LABEL, type Verdict } from "@/lib/demo/fixtures"
+import { AGENT_STATUS_LABEL, REQUEST_STATUS_LABEL, VERDICT_LABEL, type AgentStatus, type RequestStatus, type Verdict } from "@/lib/demo/fixtures"
 import { cn } from "@/lib/utils"
-import { AlertTriangle, Brain, CheckCircle2, Circle, Clock, HelpCircle, Lock, Wrench } from "lucide-react"
+import { AlertTriangle, CheckCircle2, Circle, Lock, Wrench } from "lucide-react"
 
-export const VERDICT_VARIANT: Record<Verdict, "verified" | "flagged" | "abort" | "gap" | "signal" | "merged" | "stale" | "outline"> = {
+/** One token set for every status pill: green / yellow / red / purple policy / blue in-progress. */
+export const VERDICT_VARIANT: Record<Verdict, "verified" | "flagged" | "abort" | "gap" | "signal" | "merged" | "outline"> = {
   unchecked: "outline",
-  inbrain: "verified",
-  ready: "signal",
-  cleaning: "flagged",
+  ready: "verified",
+  attention: "flagged",
   conflict: "abort",
-  stale: "stale",
-  unverified: "gap",
-  restricted: "merged",
+  restricted: "abort",
 }
 
 export const VERDICT_COLOR: Record<Verdict, string> = {
   unchecked: "var(--gap)",
-  inbrain: "var(--verified)",
-  ready: "var(--signal)",
-  cleaning: "var(--flagged)",
+  ready: "var(--verified)",
+  attention: "var(--flagged)",
   conflict: "var(--abort)",
-  stale: "var(--stale)",
-  unverified: "var(--gap)",
-  restricted: "var(--merged)",
+  restricted: "var(--abort)",
 }
 
 export const VERDICT_HEX: Record<Verdict, string> = {
   unchecked: "#b8b4aa",
-  inbrain: "#2e6f4e",
-  ready: "#16456b",
-  cleaning: "#9a6b00",
+  ready: "#2e6f4e",
+  attention: "#9a6b00",
   conflict: "#a33a2c",
-  stale: "#b4591e",
-  unverified: "#6f6b63",
-  restricted: "#6b4fbb",
+  restricted: "#a33a2c",
 }
 
 export const VERDICT_ICON: Record<Verdict, React.ComponentType<{ className?: string }>> = {
   unchecked: Circle,
-  inbrain: Brain,
   ready: CheckCircle2,
-  cleaning: Wrench,
+  attention: Wrench,
   conflict: AlertTriangle,
-  stale: Clock,
-  unverified: HelpCircle,
   restricted: Lock,
 }
 
@@ -53,6 +42,30 @@ export function VerdictPill({ verdict, className, icon = true, label }: { verdic
     <Badge variant={VERDICT_VARIANT[verdict]} className={cn("whitespace-nowrap", verdict === "unchecked" && "border-dashed text-muted-foreground", className)}>
       {icon && <Icon className="h-3 w-3" />}
       {label ?? VERDICT_LABEL[verdict]}
+    </Badge>
+  )
+}
+
+export const AGENT_STATUS_VARIANT: Record<AgentStatus, "verified" | "signal" | "gap" | "abort"> = { live: "verified", build: "signal", queued: "gap", blocked: "abort" }
+
+export function AgentStatusPill({ status, className }: { status: AgentStatus; className?: string }) {
+  return (
+    <Badge variant={AGENT_STATUS_VARIANT[status]} className={cn("whitespace-nowrap", className)}>
+      {status === "live" && <span className="h-1.5 w-1.5 rounded-full bg-verified" />}
+      {status === "build" && <span className="h-1.5 w-1.5 animate-pulsedot rounded-full bg-signal" />}
+      {status === "blocked" && <Lock className="h-3 w-3" />}
+      {AGENT_STATUS_LABEL[status]}
+    </Badge>
+  )
+}
+
+const REQUEST_VARIANT: Record<RequestStatus, "verified" | "signal" | "gap" | "abort"> = { done: "verified", scoping: "signal", scoped: "verified", queued: "gap", blocked: "abort" }
+
+export function RequestStatusPill({ status, className }: { status: RequestStatus; className?: string }) {
+  return (
+    <Badge variant={REQUEST_VARIANT[status]} className={cn("whitespace-nowrap", className)}>
+      {status === "scoping" && <span className="h-1.5 w-1.5 animate-pulsedot rounded-full bg-signal" />}
+      {REQUEST_STATUS_LABEL[status]}
     </Badge>
   )
 }

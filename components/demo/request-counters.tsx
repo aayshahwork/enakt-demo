@@ -2,7 +2,8 @@
 
 import * as React from "react"
 import { AnimatePresence, motion } from "framer-motion"
-import { Database, GitBranch, HelpCircle, ShieldCheck, Users } from "lucide-react"
+import { Check, Database, HelpCircle, Layers, ShieldCheck } from "lucide-react"
+import { fmtInt } from "@/lib/demo/format"
 import { useDemo } from "@/lib/demo/store"
 import { cn } from "@/lib/utils"
 
@@ -31,30 +32,32 @@ function Counter({ icon: Icon, label, value, accent }: { icon: React.ComponentTy
   )
 }
 
-export function IntakeCounters() {
+/** Counters above the canvas on the request page, plus the parallel scan status. */
+export function RequestCounters() {
   const sources = useDemo((s) => Object.values(s.nodes).filter((n) => n && !n.placeholder).length)
-  const people = useDemo((s) => s.people.length)
-  const workflows = useDemo((s) => s.workflows.length)
+  const lanes = useDemo((s) => s.lanes.length)
   const policies = useDemo((s) => s.policies.length)
   const questions = useDemo((s) => Object.values(s.openQuestions).filter((q) => q === "open").length)
-  const readiness = useDemo((s) => s.readiness)
+  const scan = useDemo((s) => s.scan)
+  const systems = useDemo((s) => s.scanSystems)
+  const files = useDemo((s) => s.scanFiles)
   return (
     <div className="flex items-center gap-1.5 overflow-hidden border-b bg-background/95 px-3 py-2">
       <Counter icon={Database} label="Sources" value={sources} accent="text-signal" />
-      <Counter icon={Users} label="People" value={people} accent="text-verified" />
-      <Counter icon={GitBranch} label="Workflows" value={workflows} accent="text-signal" />
+      <Counter icon={Layers} label="Lanes" value={lanes} accent="text-verified" />
       <Counter icon={ShieldCheck} label="Policies" value={policies} accent="text-merged" />
-      <Counter icon={HelpCircle} label="Open questions" value={questions} accent="text-flagged" />
+      <Counter icon={HelpCircle} label="Questions" value={questions} accent="text-abort" />
       <div className="flex-1" />
-      <AnimatePresence>
-        {readiness === "running" && (
-          <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap text-xs text-muted-foreground">
-            <span className="h-1.5 w-1.5 animate-pulsedot rounded-full bg-signal" /> Readiness pass
+      <AnimatePresence mode="wait">
+        {scan === "running" && (
+          <motion.span key="running" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-mono text-[11px] text-muted-foreground tabular">
+            <span className="h-1.5 w-1.5 animate-pulsedot rounded-full bg-signal" />
+            Scanning · {systems} systems · {fmtInt(files)} files
           </motion.span>
         )}
-        {readiness === "done" && (
-          <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="inline-flex items-center gap-1.5 text-xs text-verified">
-            0 rows read
+        {scan === "done" && (
+          <motion.span key="done" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap font-mono text-[11px] text-verified">
+            <Check className="h-3 w-3" /> Scan complete · metadata only
           </motion.span>
         )}
       </AnimatePresence>

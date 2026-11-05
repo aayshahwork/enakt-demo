@@ -3,18 +3,17 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { Cpu, Lock, Plug, UserPlus } from "lucide-react"
+import { Cloud, Cpu, Lock, Plug, UserPlus } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { ActorAvatar, getActor } from "@/components/demo/actor"
 import { Card, CardHeader, PageHeader } from "@/components/demo/page"
 import { SourceIcon } from "@/components/demo/source-icon"
-import { CONNECTIONS, DEPLOYMENT, MODEL, SETTINGS_MEMBERS, SOURCE_BY_ID, href } from "@/lib/demo/fixtures"
+import { DEPLOYMENT, MODEL, SETTINGS_MEMBERS, SYSTEMS, href } from "@/lib/demo/fixtures"
 import { relativeTime } from "@/lib/demo/format"
 import { cn } from "@/lib/utils"
 
@@ -52,37 +51,34 @@ function FenceBox({ x, y, w, h, title, sub, tone = "default" }: { x: number; y: 
   )
 }
 
-function FenceDiagram() {
+function TenantDiagram() {
   return (
-    <svg viewBox="0 0 760 300" className="block w-full" role="img" aria-label="Network fence: Enakt, data sources, people and agents inside the Ashcombe network. Enakt Inc. and cloud model vendors outside, with no connection.">
+    <svg viewBox="0 0 760 300" className="block w-full" role="img" aria-label="Calloway Hill's Azure tenant holds Enakt, the model endpoint, the data sources and the people and agents. Enakt Inc. is outside with no account and no network path.">
       <defs>
         <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M0 0L10 5L0 10z" fill="var(--signal)" />
         </marker>
       </defs>
-      {/* Fence */}
       <rect x={16} y={34} width={470} height={250} rx={14} fill="var(--verified-soft)" fillOpacity={0.45} stroke="var(--verified)" strokeWidth={2} />
       <text x={32} y={56} fontSize={11} fontWeight={600} fill="var(--verified)" fontFamily="var(--font-body)" letterSpacing="0.06em">
-        ASHCOMBE NETWORK
+        CALLOWAY HILL · AZURE TENANT · {DEPLOYMENT.region.toUpperCase()}
       </text>
       <text x={470} y={56} textAnchor="end" fontSize={10} fill="var(--muted-foreground)" fontFamily="var(--font-mono)">
-        firewall · 0 bytes out
+        egress to Enakt blocked
       </text>
 
-      <FenceBox x={40} y={78} w={190} h={64} title="Enakt" sub={`${MODEL.host} · ${MODEL.name}`} tone="verified" />
-      <FenceBox x={272} y={78} w={190} h={64} title="12 data sources" sub="read in place, never copied" />
-      <FenceBox x={156} y={196} w={190} h={64} title="People and agents" sub="scoped by policy, logged" />
+      <FenceBox x={40} y={78} w={190} h={64} title="Enakt" sub={DEPLOYMENT.version} tone="verified" />
+      <FenceBox x={272} y={78} w={190} h={64} title={MODEL.name} sub="in-tenant endpoint · no training" tone="verified" />
+      <FenceBox x={40} y={196} w={190} h={64} title="12 data sources" sub="read in place, scoped per agent" />
+      <FenceBox x={272} y={196} w={190} h={64} title="People and agents" sub="Entra ID · scoped, logged" />
 
-      {/* Internal arrows */}
-      <line x1={230} y1={110} x2={272} y2={110} stroke="var(--signal)" strokeWidth={1.5} markerEnd="url(#arr)" />
-      <line x1={135} y1={142} x2={200} y2={196} stroke="var(--signal)" strokeWidth={1.5} markerEnd="url(#arr)" markerStart="url(#arr)" />
-      <line x1={367} y1={142} x2={300} y2={196} stroke="var(--signal)" strokeWidth={1.5} markerEnd="url(#arr)" />
+      <line x1={230} y1={110} x2={272} y2={110} stroke="var(--signal)" strokeWidth={1.5} markerEnd="url(#arr)" markerStart="url(#arr)" />
+      <line x1={135} y1={142} x2={135} y2={196} stroke="var(--signal)" strokeWidth={1.5} markerEnd="url(#arr)" />
+      <line x1={367} y1={142} x2={367} y2={196} stroke="var(--signal)" strokeWidth={1.5} markerEnd="url(#arr)" markerStart="url(#arr)" />
 
-      {/* Outside */}
-      <FenceBox x={556} y={78} w={190} h={64} title="Enakt Inc." sub="no data access" tone="muted" />
-      <FenceBox x={556} y={196} w={190} h={64} title="Cloud model vendors" sub="off by policy" tone="muted" />
+      <FenceBox x={556} y={78} w={190} h={64} title="Enakt Inc." sub="no accounts · no access" tone="muted" />
+      <FenceBox x={556} y={196} w={190} h={64} title="Other model vendors" sub="not configured" tone="muted" />
 
-      {/* Crossed-out connectors */}
       <line x1={486} y1={110} x2={556} y2={110} stroke="var(--gap)" strokeWidth={1.25} strokeDasharray="4 4" />
       <g stroke="var(--abort)" strokeWidth={2} strokeLinecap="round">
         <line x1={514} y1={102} x2={528} y2={118} />
@@ -99,14 +95,16 @@ function FenceDiagram() {
 
 function DeploymentTab() {
   const rows: [string, React.ReactNode][] = [
+    ["Tenant", `${DEPLOYMENT.tenant} · region ${DEPLOYMENT.region}`],
     [
       "Installed",
       <span key="i">
-        {DEPLOYMENT.installedOn} <span className="font-mono text-xs text-muted-foreground">· {DEPLOYMENT.version}</span>
+        {DEPLOYMENT.installedOn} by {DEPLOYMENT.installedBy} <span className="font-mono text-xs text-muted-foreground">· {DEPLOYMENT.version}</span>
       </span>,
     ],
-    ["Source reviewed", `${DEPLOYMENT.reviewer}, ${DEPLOYMENT.sourceReviewed}`],
-    ["SSO", DEPLOYMENT.sso],
+    ["Enakt Inc. accounts", <Badge key="e" variant="verified">{DEPLOYMENT.enaktAccounts}</Badge>],
+    ["Identity", DEPLOYMENT.sso],
+    ["Network", "Egress to Enakt blocked at the tenant firewall · model calls stay in-tenant"],
     [
       "Audit log",
       <span key="a" className="inline-flex items-center gap-2">
@@ -116,20 +114,19 @@ function DeploymentTab() {
         </Link>
       </span>,
     ],
-    ["Egress", "0 bytes since Oct 21, measured at the firewall"],
-    ["Update channel", "Signed offline bundle, applied by Ashcombe IT"],
+    ["Update channel", "Signed release, applied by Calloway Hill IT"],
   ]
   return (
     <div className="space-y-5">
       <Card className="p-5">
         <div className="mb-3 text-sm font-medium">Where Enakt runs</div>
-        <FenceDiagram />
-        <p className="mt-3 text-xs text-muted-foreground">Enakt is installed on Ashcombe hardware. It reads sources in place, runs models on the firm&apos;s own GPUs, and has no path to Enakt Inc. or any model vendor.</p>
+        <TenantDiagram />
+        <p className="mt-3 text-xs text-muted-foreground">Enakt runs in Calloway Hill&apos;s Azure tenant. It reads sources in place, calls the in-tenant model endpoint, and has no account, key or network path to Enakt Inc.</p>
       </Card>
       <Card>
         <dl className="divide-y text-sm">
           {rows.map(([k, v]) => (
-            <div key={k} className="grid grid-cols-[160px_1fr] gap-3 px-4 py-2.5">
+            <div key={k} className="grid grid-cols-[170px_1fr] gap-3 px-4 py-2.5">
               <dt className="text-muted-foreground">{k}</dt>
               <dd className="min-w-0">{v}</dd>
             </div>
@@ -144,33 +141,28 @@ function DeploymentTab() {
 // Models
 // ---------------------------------------------------------------------------
 
-function ModelCard({ title, sub, checked, disabled, locked }: { title: string; sub: string; checked: boolean; disabled?: boolean; locked?: boolean }) {
+function ModelCard({ title, sub, checked, icon: Icon }: { title: string; sub: string; checked: boolean; icon: React.ComponentType<{ className?: string }> }) {
   const [on, setOn] = React.useState(checked)
-  const toggle = (
-    <Switch checked={on} disabled={disabled} onCheckedChange={(v) => { setOn(v); toast(v ? `${title} enabled` : `${title} disabled`, { description: v ? "Routing restored on gpu-02." : "Requests queue until re-enabled." }) }} aria-label={title} />
-  )
   return (
     <Card className="flex items-center gap-4 px-4 py-3.5">
-      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", locked ? "bg-muted text-muted-foreground" : "bg-verified-soft text-verified")}>
-        {locked ? <Lock className="h-4 w-4" /> : <Cpu className="h-4 w-4" />}
+      <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", on ? "bg-verified-soft text-verified" : "bg-muted text-muted-foreground")}>
+        <Icon className="h-4 w-4" />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2 text-sm font-medium">
           {title}
-          {locked ? <Badge variant="gap">disabled by policy</Badge> : on ? <Badge variant="verified">active</Badge> : <Badge variant="gap">off</Badge>}
+          {on ? <Badge variant="verified">active</Badge> : <Badge variant="gap">off</Badge>}
         </div>
         <div className="text-xs text-muted-foreground">{sub}</div>
       </div>
-      {locked ? (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="inline-flex">{toggle}</span>
-          </TooltipTrigger>
-          <TooltipContent>Locked by deployment policy; change requires Ashcombe security.</TooltipContent>
-        </Tooltip>
-      ) : (
-        toggle
-      )}
+      <Switch
+        checked={on}
+        onCheckedChange={(v) => {
+          setOn(v)
+          toast(v ? `${title} enabled` : `${title} disabled`, { description: v ? "Requests route here from the model gateway." : "Requests queue until re-enabled." })
+        }}
+        aria-label={title}
+      />
     </Card>
   )
 }
@@ -178,10 +170,20 @@ function ModelCard({ title, sub, checked, disabled, locked }: { title: string; s
 function ModelsTab() {
   return (
     <div className="space-y-3">
-      <ModelCard title={MODEL.name} sub={`${MODEL.host}, ${MODEL.rack} · 4× H100 · context 128k`} checked />
-      <ModelCard title="Local embedding model" sub={`${MODEL.embed} · ${MODEL.host}`} checked />
-      <ModelCard title="Cloud models" sub="No request can reach a cloud model vendor. Enforced at the firewall and in the router." checked={false} disabled locked />
-      <div className="px-1 text-xs text-muted-foreground tabular">Today: 1,204 requests · p50 2.1s · 0 sent outside</div>
+      <ModelCard title={MODEL.name} sub={`In-tenant endpoint · ${MODEL.region} · ${MODEL.note} · prompts and outputs stay in the tenant`} checked icon={Cloud} />
+      <ModelCard title={MODEL.localEndpoint} sub="Available for a self-hosted model on the firm's own compute · not configured" checked={false} icon={Cpu} />
+      <Card className="flex items-center gap-4 px-4 py-3.5">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <Lock className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            Model gateway <Badge variant="merged">policy</Badge>
+          </div>
+          <div className="text-xs text-muted-foreground">Every agent call passes the gateway, which denies tools outside the agent&apos;s scope before any request reaches a model.</div>
+        </div>
+      </Card>
+      <div className="px-1 text-xs text-muted-foreground tabular">Today: 318 requests · p50 2.4s · 0 outside the tenant</div>
     </div>
   )
 }
@@ -194,9 +196,9 @@ function MembersTab() {
   return (
     <Card className="overflow-hidden">
       <CardHeader
-        title={`${SETTINGS_MEMBERS.length} members`}
+        title={`${SETTINGS_MEMBERS.length} members · 35 seats available`}
         action={
-          <Button size="sm" variant="outline" onClick={() => toast("Invites are managed by Ashcombe IT through SSO.")}>
+          <Button size="sm" variant="outline" onClick={() => toast("Invites are managed by Calloway Hill IT through Entra ID.")}>
             <UserPlus /> Invite member
           </Button>
         }
@@ -226,7 +228,7 @@ function MembersTab() {
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">{a.email}</TableCell>
                 <TableCell>
-                  <Badge variant={m.seat === "Admin" ? "signal" : m.seat === "Compliance" ? "merged" : "outline"}>{m.seat}</Badge>
+                  <Badge variant={m.seat === "Admin" ? "signal" : m.seat === "Compliance" ? "merged" : m.seat === "Partner" ? "verified" : "outline"}>{m.seat}</Badge>
                 </TableCell>
                 <TableCell className="text-right text-xs text-muted-foreground tabular">{relativeTime(m.lastActive)}</TableCell>
               </TableRow>
@@ -242,51 +244,46 @@ function ConnectionsTab() {
   return (
     <Card className="overflow-hidden">
       <CardHeader
-        title={`${CONNECTIONS.length} connections`}
+        title={`${SYSTEMS.length} systems`}
         action={
-          <Button size="sm" variant="outline" onClick={() => toast("New connections are discovered through intake, not configured by hand.")}>
-            <Plug /> Add connection
+          <Button size="sm" variant="outline" onClick={() => toast("New systems are connected metadata-first, then scoped per agent through a connection request.")}>
+            <Plug /> Add system
           </Button>
         }
       />
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead>Source</TableHead>
+            <TableHead>System</TableHead>
+            <TableHead>Scope</TableHead>
             <TableHead>Mode</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="text-right">Owner</TableHead>
+            <TableHead className="text-right">Last sync</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {CONNECTIONS.map((c) => {
-            const s = SOURCE_BY_ID[c.sourceId]
-            return (
-              <TableRow key={c.sourceId}>
-                <TableCell>
-                  <span className="inline-flex items-center gap-2">
-                    <SourceIcon type={s.type} size={14} />
-                    <span className="text-sm font-medium">{s.name}</span>
-                  </span>
-                </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{c.mode}</TableCell>
-                <TableCell>
-                  {c.status === "connected" ? (
-                    <Badge variant="verified">Connected</Badge>
-                  ) : c.status === "metadata" ? (
-                    <Badge variant="gap">Metadata only</Badge>
-                  ) : (
-                    <Badge variant="merged">
-                      <Lock className="h-3 w-3" /> Off by policy
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  {s.ownerId ? <ActorAvatar id={s.ownerId} size="xs" className="ml-auto" /> : <span className="text-xs text-abort">No owner</span>}
-                </TableCell>
-              </TableRow>
-            )
-          })}
+          {SYSTEMS.map((c) => (
+            <TableRow key={c.id}>
+              <TableCell>
+                <span className="inline-flex items-center gap-2">
+                  <SourceIcon type={c.type} size={14} />
+                  <span className="text-sm font-medium">{c.name}</span>
+                </span>
+              </TableCell>
+              <TableCell className="text-xs text-muted-foreground">{c.detail}</TableCell>
+              <TableCell>
+                {c.mode === "scoped" ? (
+                  <Badge variant="verified">scoped read</Badge>
+                ) : c.mode === "metadata" ? (
+                  <Badge variant="gap">metadata only</Badge>
+                ) : (
+                  <Badge variant="outline">
+                    <Lock className="h-3 w-3" /> not connected
+                  </Badge>
+                )}
+              </TableCell>
+              <TableCell className="text-right text-xs text-muted-foreground tabular">{c.lastSync ? `synced ${relativeTime(c.lastSync)}` : "—"}</TableCell>
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </Card>
@@ -313,7 +310,7 @@ export default function SettingsPage() {
       <React.Suspense fallback={null}>
         <TabParam onTab={onParam} />
       </React.Suspense>
-      <PageHeader title="Settings" description="Deployment, models, members and connections for the Ashcombe workspace." />
+      <PageHeader title="Settings" description="Deployment, models, members and connected systems for the Calloway Hill workspace." />
       <Tabs value={tab} onValueChange={change}>
         <UnderlineTabsList>
           <UnderlineTabsTrigger value="deployment">Deployment</UnderlineTabsTrigger>

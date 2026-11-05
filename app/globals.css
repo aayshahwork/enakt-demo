@@ -149,16 +149,27 @@
 .react-flow__attribution {
   display: none;
 }
-.react-flow__edge.edge-flow path.react-flow__edge-path {
-  stroke: var(--verified);
-  stroke-dasharray: 6 6;
-  animation: dash 0.8s linear infinite;
-}
-.react-flow__edge.edge-dep path.react-flow__edge-path {
+.react-flow__edge.edge-scope path.react-flow__edge-path {
   stroke: var(--signal);
+  stroke-dasharray: 6 6;
+  animation: dash 1s linear infinite;
+  opacity: 0.85;
+}
+.react-flow__edge.edge-live path.react-flow__edge-path {
+  stroke: var(--verified);
+  stroke-width: 2;
+}
+.react-flow__edge.edge-requested path.react-flow__edge-path {
+  stroke: var(--gap);
+  stroke-dasharray: 3 5;
+  opacity: 0.55;
+}
+.react-flow__edge.edge-blocked path.react-flow__edge-path {
+  stroke: var(--abort);
+  stroke-dasharray: 3 5;
   opacity: 0.7;
 }
-.react-flow__edge.edge-held path.react-flow__edge-path {
+.react-flow__edge.edge-dep path.react-flow__edge-path {
   stroke: var(--flagged);
   stroke-dasharray: 2 4;
   opacity: 0.8;
@@ -191,15 +202,6 @@
   margin: -4px;
 }
 
-.react-flow__edge.edge-brain path.react-flow__edge-path {
-  stroke: var(--verified);
-  stroke-dasharray: 6 6;
-  animation: dash 0.8s linear infinite;
-}
-.react-flow__edge.edge-dep path.react-flow__edge-path {
-  stroke: var(--signal);
-  opacity: 0.7;
-}
 .react-flow__edge.edge-hidden {
   opacity: 0;
   transition: opacity 300ms ease-out;

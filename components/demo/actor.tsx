@@ -6,11 +6,12 @@ import { Bot, Users } from "lucide-react"
 
 const HUES: Record<string, string> = {
   dana: "bg-signal-soft text-signal",
-  marcus: "bg-verified-soft text-verified",
-  priya: "bg-flagged-soft text-flagged",
-  sam: "bg-merged-soft text-merged",
-  chris: "bg-abort-soft text-abort",
-  planning: "bg-gap-soft text-gap",
+  ellen: "bg-merged-soft text-merged",
+  tom: "bg-verified-soft text-verified",
+  nina: "bg-flagged-soft text-flagged",
+  owen: "bg-stale-soft text-stale",
+  grace: "bg-abort-soft text-abort",
+  "atlas-team": "bg-gap-soft text-gap",
 }
 
 export function getActor(id: string): Actor {
@@ -41,10 +42,11 @@ export function ActorAvatar({ id, size = "md", className }: { id: string; size?:
   )
 }
 
-export function LocalModelBadge({ className }: { className?: string }) {
+/** Every agent runs on the in-tenant model. */
+export function ModelBadge({ className }: { className?: string }) {
   return (
     <Badge variant="gap" className={cn("font-mono text-[10px]", className)}>
-      local model
+      in-tenant model
     </Badge>
   )
 }
@@ -54,7 +56,7 @@ export function ActorName({ id, withRole, withModel = true, className }: { id: s
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
       <span className={cn("font-medium", a.kind === "agent" && "font-mono text-[13px]")}>{a.name}</span>
-      {withModel && a.kind === "agent" && <LocalModelBadge />}
+      {withModel && a.kind === "agent" && <ModelBadge />}
       {withRole && a.role && <span className="text-muted-foreground">· {a.role}</span>}
     </span>
   )

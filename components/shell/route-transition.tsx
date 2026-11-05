@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TIMING } from "@/lib/demo/sim"
 
-const isCanvasRoute = (p: string) => /\/(intake|map)(\/|$)/.test(p)
+const isCanvasRoute = (p: string) => /\/(requests\/r-3|map)(\/|$)/.test(p)
 
 function PageSkeleton({ kind }: { kind: string }) {
   if (kind === "map") {
@@ -19,13 +19,13 @@ function PageSkeleton({ kind }: { kind: string }) {
       </div>
     )
   }
-  if (kind === "intake") {
+  if (kind === "request") {
     return (
-      <div className="grid h-full grid-cols-[40%_1fr] gap-0">
+      <div className="grid h-full grid-cols-[42%_1fr] gap-0">
         <div className="space-y-3 border-r p-5">
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-4 w-72" />
-          <Skeleton className="mt-4 h-[420px]" />
+          <Skeleton className="h-24" />
+          <Skeleton className="h-28" />
+          <Skeleton className="mt-2 h-[360px]" />
         </div>
         <Skeleton className="m-5 h-auto" />
       </div>
@@ -33,13 +33,16 @@ function PageSkeleton({ kind }: { kind: string }) {
   }
   if (kind === "split") {
     return (
-      <div className="grid h-full grid-cols-[1fr_1fr] gap-6 p-6">
-        <div className="space-y-3">
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-4 w-72" />
-          <Skeleton className="mt-4 h-[420px]" />
+      <div className="mx-auto w-full max-w-6xl space-y-5 p-6">
+        <Skeleton className="h-4 w-20" />
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-72" />
+          <Skeleton className="h-4 w-96" />
         </div>
-        <Skeleton className="h-full" />
+        <div className="grid grid-cols-[1fr_1fr] gap-4">
+          <Skeleton className="h-[440px]" />
+          <Skeleton className="h-[440px]" />
+        </div>
       </div>
     )
   }
@@ -61,8 +64,8 @@ function PageSkeleton({ kind }: { kind: string }) {
 }
 
 /**
- * Shows a page-shaped skeleton for a fixed beat on route change. Moving between Intake and Map
- * skips it so the shared canvas stays mounted and never re-renders.
+ * Shows a page-shaped skeleton for a fixed beat on route change. Moving between the request
+ * and the map skips it so the shared canvas stays mounted and never re-renders.
  */
 export function RouteTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -84,7 +87,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(t)
   }, [pathname])
 
-  const kind = pathname.includes("/map") ? "map" : pathname.includes("/intake") ? "intake" : pathname.includes("/agents/") ? "split" : "page"
+  const kind = pathname.includes("/map") ? "map" : pathname.includes("/requests/r-3") ? "request" : pathname.includes("/agents/") || pathname.includes("/connections/") ? "split" : "page"
 
   return (
     <div className="relative h-full min-h-0">

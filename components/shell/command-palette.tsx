@@ -8,8 +8,8 @@ import { toast } from "sonner"
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command"
 import { ActorAvatar } from "@/components/demo/actor"
 import { SourceIcon } from "@/components/demo/source-icon"
-import { VerdictPill } from "@/components/demo/verdict-pill"
-import { AGENTS, PEOPLE, SOURCES, href } from "@/lib/demo/fixtures"
+import { AgentStatusPill, VerdictPill } from "@/components/demo/verdict-pill"
+import { AGENTS, AGENT_ORDER, CR, METER, PEOPLE, REQUEST, SOURCES, href } from "@/lib/demo/fixtures"
 import { useDemo } from "@/lib/demo/store"
 import { NAV } from "./sidebar"
 
@@ -19,7 +19,8 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
   const toggleRec = useDemo((s) => s.toggleRec)
   const rec = useDemo((s) => s.rec)
   const nodes = useDemo((s) => s.nodes)
-  const intakeDone = useDemo((s) => s.intakePhase === "done")
+  const liveAgents = useDemo((s) => s.liveAgents)
+  const requestDone = useDemo((s) => s.requestPhase === "done")
   const { resolvedTheme, setTheme } = useTheme()
 
   React.useEffect(() => {
@@ -40,7 +41,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Jump to a page, source, or person…" />
+      <CommandInput placeholder="Jump to a page, source, person or agent…" />
       <CommandList>
         <CommandEmpty>No results.</CommandEmpty>
         <CommandGroup heading="Pages">
@@ -51,16 +52,22 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
               {n.key && <CommandShortcut>{n.key}</CommandShortcut>}
             </CommandItem>
           ))}
-          <CommandItem value="page merge request mr-14" onSelect={() => go(href("/build/mr-14"))}>
-            <span className="font-mono text-xs text-muted-foreground">MR-14</span>
-            Bring Onboarding and Billing into the firm brain
+          <CommandItem value="page request r-3 atlas ic memo" onSelect={() => go(href("/requests/r-3"))}>
+            <span className="font-mono text-xs text-muted-foreground">R-3</span>
+            {REQUEST.title}
+            <CommandShortcut>2</CommandShortcut>
+          </CommandItem>
+          <CommandItem value="page connection request cr-7" onSelect={() => go(href("/connections/cr-7"))}>
+            <span className="font-mono text-xs text-muted-foreground">CR-7</span>
+            {CR.title}
+            <CommandShortcut>5</CommandShortcut>
           </CommandItem>
         </CommandGroup>
         <CommandGroup heading="Sources">
           {SOURCES.map((s) => {
-            const verdict = intakeDone ? s.verdict : (nodes[s.id]?.verdict ?? "unchecked")
+            const verdict = requestDone ? s.verdict : (nodes[s.id]?.verdict ?? "unchecked")
             return (
-              <CommandItem key={s.id} value={`source ${s.name} ${s.type} ${s.verdict}`} onSelect={() => go(href(`/map?source=${s.id}`))}>
+              <CommandItem key={s.id} value={`source ${s.name} ${s.type} ${s.lane} ${s.verdict}`} onSelect={() => go(href(`/map?source=${s.id}`))}>
                 <SourceIcon type={s.type} size={14} />
                 <span className="flex-1 truncate">{s.name}</span>
                 <VerdictPill verdict={verdict} icon={false} />
@@ -72,7 +79,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
           {Object.values(PEOPLE)
             .filter((p) => p.kind === "person")
             .map((p) => (
-              <CommandItem key={p.id} value={`person ${p.name} ${p.role}`} onSelect={() => go(href(`/build?owner=${p.id}`))}>
+              <CommandItem key={p.id} value={`person ${p.name} ${p.role}`} onSelect={() => go(href(`/readiness?owner=${p.id}`))}>
                 <ActorAvatar id={p.id} size="xs" />
                 <span className="flex-1 truncate">{p.name}</span>
                 <span className="text-xs text-muted-foreground">{p.role}</span>
@@ -80,13 +87,16 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             ))}
         </CommandGroup>
         <CommandGroup heading="Agents">
-          {Object.values(AGENTS).map((a) => (
-            <CommandItem key={a.id} value={`agent ${a.name} ${a.role}`} onSelect={() => go(href(`/agents/${a.id}`))}>
-              <ActorAvatar id={a.id} size="xs" />
-              <span className="flex-1 truncate font-mono text-[13px]">{a.name}</span>
-              <span className="text-xs text-muted-foreground">{a.role}</span>
-            </CommandItem>
-          ))}
+          {AGENT_ORDER.map((id) => {
+            const a = AGENTS[id]
+            return (
+              <CommandItem key={a.id} value={`agent ${a.name} ${a.role}`} onSelect={() => go(href(`/agents/${a.id}`))}>
+                <ActorAvatar id={a.id} size="xs" />
+                <span className="flex-1 truncate font-mono text-[13px]">{a.name}</span>
+                <AgentStatusPill status={liveAgents.includes(id) ? "live" : (a.status ?? "queued")} />
+              </CommandItem>
+            )
+          })}
         </CommandGroup>
         <CommandGroup heading="Actions">
           <CommandItem value="toggle theme dark light" onSelect={() => { setTheme(resolvedTheme === "dark" ? "light" : "dark"); onOpenChange(false) }}>
@@ -99,7 +109,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             {rec ? "Exit recording mode" : "Recording mode"}
             <CommandShortcut>⇧F</CommandShortcut>
           </CommandItem>
-          <CommandItem value="reset demo state" onSelect={() => { reset(); onOpenChange(false); toast("Demo reset", { description: "Canvas cleared, MR-14 reopened, brain back to 38%." }) }}>
+          <CommandItem value="reset demo state" onSelect={() => { reset(); onOpenChange(false); toast("Demo reset", { description: `Request submitted, canvas empty, CR-7 at 0 of 2, meter at ${METER.before}%.` }) }}>
             <RotateCcw className="text-muted-foreground" />
             Reset demo state
             <CommandShortcut>⇧R</CommandShortcut>
