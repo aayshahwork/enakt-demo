@@ -2,252 +2,177 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { AlertTriangle, ArrowRight, Bot, Check, Cloud, Eye, FileText, GitPullRequest, Inbox, Lock, Server, ShieldCheck, Wrench, X } from "lucide-react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { AnimatePresence, motion } from "framer-motion"
+import { ArrowRight, Map as MapIcon, Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ActorAvatar, ActorName } from "@/components/demo/actor"
+import { EMark, Wordmark } from "@/components/demo/logo"
 import { Card, CardHeader, PageHeader, Stat } from "@/components/demo/page"
-import { SourceIcon } from "@/components/demo/source-icon"
-import { Truncate } from "@/components/demo/truncate"
-import { AgentStatusPill, VerdictPill } from "@/components/demo/verdict-pill"
-import { AGENTS, AGENT_ORDER, AUDIT, CR, DEPLOYMENT, METER, MODEL, REVENUE, SOURCES, SOURCE_BY_ID, href, type AgentStatus, type AuditKind } from "@/lib/demo/fixtures"
+import { ColourDot, StagePill } from "@/components/demo/status-pill"
+import { ACTIVITY, COLOUR_LABEL, CURRENT_USER, END_CARD, EMPLOYEE, HERO, HERO_REQUEST, OTHER_AGENTS, REQUEST_FEED, ROLLOUT, STAGES, countColours, href, type Colour, type Stage } from "@/lib/demo/fixtures"
 import { relativeTime } from "@/lib/demo/format"
 import { useDemo } from "@/lib/demo/store"
 import { cn } from "@/lib/utils"
 
-const KIND_ICON: Record<AuditKind, { icon: React.ComponentType<{ className?: string }>; cls: string }> = {
-  blocked: { icon: X, cls: "text-abort" },
-  connect: { icon: GitPullRequest, cls: "text-signal" },
-  approve: { icon: Check, cls: "text-verified" },
-  policy: { icon: ShieldCheck, cls: "text-merged" },
-  read: { icon: Eye, cls: "text-muted-foreground" },
-  request: { icon: Inbox, cls: "text-signal" },
-  task: { icon: Check, cls: "text-verified" },
-  system: { icon: Server, cls: "text-muted-foreground" },
+const COLOURS: Colour[] = ["green", "yellow", "red", "black"]
+
+/** `?end=1` shows the end card (beat 9). */
+function EndParam() {
+  const params = useSearchParams()
+  const setEndCard = useDemo((s) => s.setEndCard)
+  const router = useRouter()
+  React.useEffect(() => {
+    if (params.get("end") === "1") {
+      setEndCard(true)
+      router.replace(href(), { scroll: false })
+    }
+  }, [params, setEndCard, router])
+  return null
 }
 
-/** This week, by owner. Approvals and the readiness tasks. */
-const WEEK: { owner: string; items: { id: string; text: string; due: string }[] }[] = [
-  { owner: "ellen", items: [{ id: "approve-ellen", text: "Approve CR-7 as deal partner", due: "Nov 6" }] },
-  {
-    owner: "grace",
-    items: [
-      { id: "approve-grace", text: "Approve CR-7 as CCO", due: "Nov 6" },
-      { id: "lp-decide", text: "Decide the lp-letter-agent request", due: "Nov 7" },
-      { id: "kpi", text: "Collect September packs from 2 companies", due: "Nov 14" },
-    ],
-  },
-  {
-    owner: "nina",
-    items: [
-      { id: "revenue", text: "Resolve TTM revenue: CIM p.14 vs Monthly P&L F42", due: "Nov 12" },
-      { id: "v6", text: "Retire the v6 link in the memo draft", due: "Nov 8" },
-    ],
-  },
-  { owner: "tom", items: [{ id: "datasite", text: "Confirm atlas-deal-team group for atlas-memo-agent", due: "Nov 6" }] },
-  { owner: "dana", items: [{ id: "outlook", text: "Decide whether to connect Outlook metadata", due: "Nov 18" }] },
-]
-
-export default function HomePage() {
-  const progress = useDemo((s) => s.progress)
-  const liveAgents = useDemo((s) => s.liveAgents)
-  const approvals = useDemo((s) => s.approvals)
-  const crStatus = useDemo((s) => s.crStatus)
-  const extraAudit = useDemo((s) => s.extraAudit)
-
-  const activity = React.useMemo(() => [...extraAudit, ...AUDIT].slice(0, 8), [extraAudit])
-  const after = progress >= METER.after
-  const statusOf = (id: string): AgentStatus => (liveAgents.includes(id) ? "live" : (AGENTS[id].status ?? "queued"))
-  const counts = AGENT_ORDER.filter((id) => AGENTS[id].requestId).reduce(
-    (acc, id) => {
-      acc[statusOf(id)]++
-      return acc
-    },
-    { live: 0, build: 0, queued: 0, blocked: 0 } as Record<AgentStatus, number>,
+function EndCard() {
+  const endCard = useDemo((s) => s.endCard)
+  const setEndCard = useDemo((s) => s.setEndCard)
+  return (
+    <AnimatePresence>
+      {endCard && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className="fixed inset-0 z-50 flex items-center justify-center bg-background/92 backdrop-blur-sm" onClick={() => setEndCard(false)} role="dialog" aria-label="End card">
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }} className="text-center">
+            <div className="mx-auto mb-6 flex items-center justify-center gap-3">
+              <EMark size={44} />
+              <Wordmark className="text-3xl" />
+            </div>
+            <div className="font-display text-[40px] font-medium leading-[1.15] tracking-[-0.03em]">{END_CARD}</div>
+            <div className="mt-3 text-base text-muted-foreground">{EMPLOYEE.name}, {EMPLOYEE.tagline}.</div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   )
-  const sourcesReady = SOURCES.filter((s) => s.verdict === "ready").length
-  const doneItem = (id: string) => (id === "approve-ellen" && approvals.includes("ellen")) || (id === "approve-grace" && approvals.includes("grace"))
+}
+
+export default function OverviewPage() {
+  const readiness = useDemo((s) => s.readiness)
+  const overrides = useDemo((s) => s.overrides)
+  const heroStage = useDemo((s) => s.heroStage)
+  const extraActivity = useDemo((s) => s.extraActivity)
+  const activity = React.useMemo(() => [...extraActivity, ...ACTIVITY], [extraActivity])
+  const counts = countColours(CURRENT_USER.id, overrides)
+  const agents = [...(heroStage ? [{ id: HERO.id, name: HERO.name, requesterId: HERO.requesterId, stage: heroStage, requestId: HERO.requestId }] : []), ...OTHER_AGENTS]
+  const byStage = (st: Stage) => agents.filter((a) => a.stage === st)
+  const feed = [...(heroStage ? [HERO_REQUEST] : []), ...REQUEST_FEED]
+  const deployed = agents.filter((a) => a.stage === "deployed" || a.stage === "learning").length
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 p-6">
-      <PageHeader title="Home" description="Calloway Hill Partners · what the first agent needs, what is ready, and who owns each gap." />
+      <React.Suspense fallback={null}>
+        <EndParam />
+      </React.Suspense>
+      <EndCard />
+      <PageHeader
+        title="Overview"
+        description={`Kestrel Ridge Capital · how AI-ready the firm is, which agents are moving, and what people have asked for.`}
+        actions={
+          <Button asChild size="sm" variant="signal">
+            <Link href={href("/requests/new")} id="new-request">
+              <Plus /> Ask {EMPLOYEE.name} for an automation
+            </Link>
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <Stat label="Firm AI-ready" value={`${Math.round(progress)}%`} hint={after ? "1 agent live · 4 sources connected" : "0 agents live · Day 12 of 30"} accent={after ? "var(--verified)" : "var(--signal)"} />
-        <Stat label="Agents" value={counts.live} hint={`live · ${counts.build} in build · ${counts.queued + counts.blocked} queued`} />
-        <Stat label="Sources scanned" value={SOURCES.length} hint={`${sourcesReady} ready · 0 rows read`} />
-        <Stat label="Approvals open" value={crStatus === "merged" ? 0 : CR.approvers.length - approvals.length} hint={crStatus === "merged" ? "CR-7 merged" : "CR-7 · deal partner and CCO"} accent={crStatus === "merged" ? "var(--verified)" : "var(--flagged)"} />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader
-            title={
-              <span className="inline-flex items-center gap-2">
-                Needs attention <span className="rounded-full bg-muted px-1.5 text-[11px] text-muted-foreground tabular">3</span>
-              </span>
-            }
-            action={
-              <Link href={href("/readiness")} className="text-xs text-muted-foreground transition-colors hover:text-foreground">
-                Open Readiness
-              </Link>
-            }
-          />
-          <ul className="divide-y">
-            <li>
-              <Link href={href("/readiness?source=atlas-dataroom")} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/60">
-                <span className="inline-flex h-[19.6px] w-[19.6px] shrink-0 items-center justify-center rounded-md bg-abort-soft text-abort">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">Northline TTM revenue does not tie</div>
-                  <Truncate className="text-xs text-muted-foreground" text={`${REVENUE.a.value} in the CIM (p.14) vs ${REVENUE.b.value} in the monthly P&L (F42). Held for Nina Alvarez.`}>
-                    {REVENUE.a.value} in the CIM (p.14) vs {REVENUE.b.value} in the monthly P&L (F42). Held for Nina Alvarez.
-                  </Truncate>
-                </div>
-                <VerdictPill verdict="conflict" />
-              </Link>
-            </li>
-            <li>
-              <Link href={href("/readiness?source=atlas-model-v6")} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/60">
-                <SourceIcon type="sharepoint" size={14} />
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{SOURCE_BY_ID["atlas-model-v6"].name}</div>
-                  <Truncate className="text-xs text-muted-foreground" text={SOURCE_BY_ID["atlas-model-v6"].reason}>
-                    {SOURCE_BY_ID["atlas-model-v6"].reason}
-                  </Truncate>
-                </div>
-                <VerdictPill verdict="attention" label="Stale model" icon={false} className="gap-1">
-                </VerdictPill>
-              </Link>
-            </li>
-            <li>
-              <Link href={href("/rollout")} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/60">
-                <span className="inline-flex h-[19.6px] w-[19.6px] shrink-0 items-center justify-center rounded-md bg-abort-soft text-abort">
-                  <Lock className="h-3.5 w-3.5" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">R-5 lp-letter-agent needs the LP database</div>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    Red source · awaiting <ActorAvatar id="grace" size="xs" /> Grace Liu (CCO)
-                  </div>
-                </div>
-                <AgentStatusPill status="blocked" />
-              </Link>
-            </li>
-          </ul>
-        </Card>
-
-        <Card>
-          <CardHeader title="This week" action={<span className="text-xs text-muted-foreground">by owner</span>} />
-          <div className="divide-y">
-            {WEEK.map((g) => (
-              <div key={g.owner} className="px-4 py-3">
-                <div className="mb-1.5 flex items-center gap-2 text-xs">
-                  <ActorAvatar id={g.owner} size="xs" />
-                  <ActorName id={g.owner} withRole className="text-xs" />
-                </div>
-                <ul className="space-y-1">
-                  {g.items.map((it) => {
-                    const done = doneItem(it.id)
-                    return (
-                      <li key={it.id} className="flex items-center gap-2 pl-7 text-sm">
-                        {done ? <Check className="h-3.5 w-3.5 shrink-0 text-verified" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border" />}
-                        <span className={cn("min-w-0 flex-1 truncate", done && "text-muted-foreground line-through")}>{it.text}</span>
-                        <span className="shrink-0 text-xs text-muted-foreground tabular">due {it.due}</span>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
+        <Stat label="Firm AI-readiness" value={`${readiness}%`} hint={`${counts.green} of ${counts.green + counts.yellow + counts.red + counts.black} sources merged`} accent="var(--verified)" />
+        <Card className="px-4 py-3.5 lg:col-span-2">
+          <div className="text-xs font-medium text-muted-foreground">Sources by readiness</div>
+          <div className="mt-2 flex h-2.5 overflow-hidden rounded-full bg-muted">
+            {COLOURS.map((c) => (
+              <div key={c} className="h-full transition-[width] duration-700" style={{ width: `${(counts[c] / 12) * 100}%`, background: c === "black" ? "var(--ink)" : c === "green" ? "var(--verified)" : c === "yellow" ? "var(--flagged)" : "var(--abort)" }} />
             ))}
           </div>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            {COLOURS.map((c) => (
+              <span key={c} className="inline-flex items-center gap-1.5">
+                <ColourDot colour={c} /> {COLOUR_LABEL[c]} <span className="font-mono font-medium tabular">{counts[c]}</span>
+              </span>
+            ))}
+            <Link href={href("/map")} className="ml-auto inline-flex items-center gap-1 font-medium text-signal underline-offset-4 hover:underline">
+              <MapIcon className="h-3 w-3" /> Open the firm map
+            </Link>
+          </div>
         </Card>
+        <Stat label="Agents deployed" value={deployed} hint={`of ${agents.length} requested · Day ${ROLLOUT.day} of ${ROLLOUT.total}`} accent={deployed ? "var(--verified)" : undefined} />
       </div>
 
       <Card>
-        <CardHeader
-          title="Agents"
-          action={
-            <Link href={href("/agents")} className="text-xs text-muted-foreground transition-colors hover:text-foreground">
-              All agents
-            </Link>
-          }
-        />
-        <ul className="grid divide-y md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-4 xl:divide-y-0">
-          {AGENT_ORDER.map((id) => {
-            const a = AGENTS[id]
-            const st = statusOf(id)
+        <CardHeader title="Agent pipeline" action={<Link href={href("/agents")} className="text-xs text-muted-foreground transition-colors hover:text-foreground">All agents</Link>} />
+        <div className="grid grid-cols-6 divide-x">
+          {STAGES.map((st) => {
+            const list = byStage(st.id)
             return (
-              <li key={id}>
-                <Link href={href(`/agents/${id}`)} className="flex h-full flex-col gap-1.5 px-4 py-3 transition-colors hover:bg-accent/60">
-                  <div className="flex items-center gap-2">
-                    <ActorAvatar id={id} size="sm" />
-                    <span className="min-w-0 flex-1 truncate font-mono text-[12px] font-medium">{a.name}</span>
-                    <AgentStatusPill status={st} />
-                  </div>
-                  <div className="line-clamp-2 text-xs leading-4 text-muted-foreground">{a.role} · {a.scope?.length ?? 0} sources in scope</div>
-                </Link>
-              </li>
+              <div key={st.id} className="min-h-[112px] px-3 py-2.5">
+                <div className="mb-2 flex items-center justify-between text-[11px] font-medium text-muted-foreground">
+                  {st.label} <span className="font-mono tabular">{list.length}</span>
+                </div>
+                <ul className="space-y-1.5">
+                  {list.map((a) => (
+                    <li key={a.id}>
+                      <Link href={href(`/agents/${a.id}`)} className={cn("block rounded-md border bg-card px-2 py-1.5 text-[12px] font-medium leading-4 transition-colors hover:bg-accent", a.id === HERO.id && "border-signal/50 bg-signal-soft/40")}>
+                        <span className="block truncate">{a.name}</span>
+                        <span className="mt-0.5 flex items-center gap-1 text-[10px] font-normal text-muted-foreground">
+                          <ActorAvatar id={a.requesterId} size="xs" className="h-4 w-4 text-[8px]" /> {a.requestId.toUpperCase()}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )
           })}
-        </ul>
+        </div>
       </Card>
 
-      <Card>
-        <CardHeader
-          title="Recent activity"
-          action={
-            <Button asChild variant="ghost" size="sm">
-              <Link href={href("/audit")}>
-                View audit log <ArrowRight />
-              </Link>
-            </Button>
-          }
-        />
-        <ul className="divide-y">
-          {activity.map((a) => {
-            const k = KIND_ICON[a.kind]
-            const Icon = k.icon
-            const row = (
-              <>
-                <ActorAvatar id={a.actorId} size="sm" />
-                <span className="min-w-0 flex-1 text-sm">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <Card>
+          <CardHeader title="Request feed" action={<span className="text-xs text-muted-foreground">what people across the firm have asked for</span>} />
+          <ul className="divide-y">
+            {feed.map((r) => {
+              const agent = agents.find((a) => a.id === r.agentId)
+              return (
+                <li key={r.id}>
+                  <Link href={href(`/agents/${r.agentId}`)} className="flex items-start gap-3 px-4 py-2.5 transition-colors hover:bg-accent/60">
+                    <ActorAvatar id={r.requesterId} size="sm" className="mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm leading-5">&ldquo;{r.text}&rdquo;</div>
+                      <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <ActorName id={r.requesterId} className="text-xs" /> · {r.label} · {relativeTime(r.at)}
+                      </div>
+                    </div>
+                    {agent && <StagePill stage={agent.stage} />}
+                  </Link>
+                </li>
+              )
+            })}
+          </ul>
+        </Card>
+        <Card>
+          <CardHeader title="Activity" />
+          <ul className="divide-y">
+            {activity.slice(0, 7).map((a) => (
+              <li key={a.id} className="flex items-start gap-2.5 px-4 py-2.5 text-sm">
+                <ActorAvatar id={a.actorId} size="sm" className="mt-0.5" />
+                <span className="min-w-0 flex-1 leading-5">
                   <ActorName id={a.actorId} /> <span className={cn(a.kind === "blocked" ? "text-abort" : "text-muted-foreground")}>{a.text}</span>
                 </span>
-                <Icon className={cn("h-3.5 w-3.5 shrink-0", k.cls)} />
-                <span className="w-16 shrink-0 text-right text-xs text-muted-foreground tabular">{relativeTime(a.at)}</span>
-              </>
-            )
-            return (
-              <li key={a.id}>
-                {a.href ? (
-                  <Link href={a.href} className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-accent/60">
-                    {row}
-                  </Link>
-                ) : (
-                  <div className="flex items-center gap-3 px-4 py-2.5">{row}</div>
-                )}
+                <span className="shrink-0 text-xs text-muted-foreground tabular">{relativeTime(a.at)}</span>
               </li>
-            )
-          })}
-        </ul>
-      </Card>
-
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border bg-muted/40 px-4 py-2.5 text-xs text-muted-foreground">
-        <Cloud className="h-3.5 w-3.5 text-verified" />
-        <span className="font-medium text-foreground">Runs in Calloway Hill&apos;s Azure tenant</span>
-        <span>·</span>
-        <span>{MODEL.name}, {MODEL.note}</span>
-        <span>·</span>
-        <span>Enakt Inc. accounts: {DEPLOYMENT.enaktAccounts}</span>
-        <span>·</span>
-        <span>installed {DEPLOYMENT.installedOn.replace(", 2026", "")} by {DEPLOYMENT.installedBy}</span>
-        <Link href={href("/settings?tab=deployment")} className="ml-auto inline-flex items-center gap-1 font-medium text-signal underline-offset-4 hover:underline">
-          Deployment details <ArrowRight className="h-3 w-3" />
-        </Link>
+            ))}
+          </ul>
+        </Card>
       </div>
       <span className="sr-only">
-        <Bot /> <FileText /> <Wrench />
+        <ArrowRight />
       </span>
     </div>
   )

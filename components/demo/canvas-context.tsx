@@ -1,31 +1,14 @@
 "use client"
 
 import * as React from "react"
-import type { SourceId, Verdict } from "@/lib/demo/fixtures"
+import type { SourceId } from "@/lib/demo/fixtures"
 
-type Ctx = {
-  selected: SourceId | null
-  setSelected: (id: SourceId | null) => void
-  hiddenVerdicts: Set<Verdict>
-  toggleVerdict: (v: Verdict) => void
-  clearVerdicts: () => void
-}
-
+type Ctx = { selected: SourceId | null; setSelected: (id: SourceId | null) => void }
 const CanvasSelectionContext = React.createContext<Ctx | null>(null)
 
 export function CanvasSelectionProvider({ children }: { children: React.ReactNode }) {
   const [selected, setSelected] = React.useState<SourceId | null>(null)
-  const [hiddenVerdicts, setHidden] = React.useState<Set<Verdict>>(() => new Set())
-  const toggleVerdict = React.useCallback((v: Verdict) => {
-    setHidden((prev) => {
-      const next = new Set(prev)
-      if (next.has(v)) next.delete(v)
-      else next.add(v)
-      return next
-    })
-  }, [])
-  const clearVerdicts = React.useCallback(() => setHidden(new Set()), [])
-  const value = React.useMemo(() => ({ selected, setSelected, hiddenVerdicts, toggleVerdict, clearVerdicts }), [selected, hiddenVerdicts, toggleVerdict, clearVerdicts])
+  const value = React.useMemo(() => ({ selected, setSelected }), [selected])
   return <CanvasSelectionContext.Provider value={value}>{children}</CanvasSelectionContext.Provider>
 }
 

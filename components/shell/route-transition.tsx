@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TIMING } from "@/lib/demo/sim"
 
-const isCanvasRoute = (p: string) => /\/(requests\/r-3|map)(\/|$)/.test(p)
+const isCanvasRoute = (p: string) => /\/(requests\/r-7|map)(\/|$)/.test(p)
 
 function PageSkeleton({ kind }: { kind: string }) {
   if (kind === "map") {
@@ -87,7 +87,7 @@ export function RouteTransition({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(t)
   }, [pathname])
 
-  const kind = pathname.includes("/map") ? "map" : pathname.includes("/requests/r-3") ? "request" : pathname.includes("/agents/") || pathname.includes("/connections/") ? "split" : "page"
+  const kind = pathname.includes("/map") ? "map" : pathname.includes("/requests/r-7") ? "request" : pathname.includes("/agents/") ? "split" : "page"
 
   return (
     <div className="relative h-full min-h-0">

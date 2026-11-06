@@ -4,550 +4,228 @@ import * as React from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { AnimatePresence, motion } from "framer-motion"
-import { AlertTriangle, ArrowLeft, Bot, CalendarClock, Check, CheckCircle2, Cloud, Diamond, FileText, History, Lock, Pause, Play, RotateCcw, Send, X } from "lucide-react"
+import { ArrowLeft, ChevronDown, Lock, Rocket, ShieldCheck } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, UnderlineTabsList, UnderlineTabsTrigger } from "@/components/ui/tabs"
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { ActorAvatar, ActorName, ModelBadge, getActor } from "@/components/demo/actor"
-import { Card, CardHeader, EmptyState } from "@/components/demo/page"
-import { SourceIcon } from "@/components/demo/source-icon"
-import { AgentStatusPill, VerdictPill } from "@/components/demo/verdict-pill"
-import {
-  ACCESS_LABEL,
-  AGENTS,
-  AGENT_POLICY,
-  BRIEF,
-  DEALS,
-  MODEL,
-  NOW,
-  POLICY_BY_ID,
-  RESOURCES,
-  RUN_FOOTER,
-  RUN_HISTORY,
-  RUN_PROMPT,
-  SOURCES,
-  SOURCE_BY_ID,
-  TRACE,
-  href,
-  type HistoryRow,
-  type TraceKind,
-  type TraceStep,
-} from "@/lib/demo/fixtures"
-import { absoluteTime } from "@/lib/demo/format"
+import { ActorAvatar, ActorName } from "@/components/demo/actor"
+import { Card, CardHeader, EmptyState, PageHeader } from "@/components/demo/page"
+import { ColourPill, StagePill } from "@/components/demo/status-pill"
+import { ACCESS_LABEL, ACTIVITY, BUILD_STEPS, CURRENT_USER, EVAL_TREND, HERO, OTHER_AGENTS, PERMISSIONS, SOURCE_BY_ID, colourFor, href, type Access, type Permission } from "@/lib/demo/fixtures"
+import { relativeTime } from "@/lib/demo/format"
 import { useDemo } from "@/lib/demo/store"
 import { cn } from "@/lib/utils"
 
-const KIND_META: Record<TraceKind, { icon: React.ComponentType<{ className?: string }>; cls: string }> = {
-  scope: { icon: Diamond, cls: "text-signal" },
-  read: { icon: Check, cls: "text-verified" },
-  blocked: { icon: X, cls: "text-abort" },
-  conflict: { icon: AlertTriangle, cls: "text-flagged" },
-  done: { icon: CheckCircle2, cls: "text-verified" },
-}
+const ACCESS_VARIANT: Record<Access, "verified" | "signal" | "flagged" | "abort"> = { read: "verified", write: "signal", ask: "flagged", none: "abort" }
 
-// ---------------------------------------------------------------------------
-// Run tab (atlas-memo-agent)
-// ---------------------------------------------------------------------------
-
-function TraceRow({ step }: { step: TraceStep }) {
-  const hoverStep = useDemo((s) => s.hoverStep)
-  const blockedPulse = useDemo((s) => s.blockedPulse)
-  const traceShown = useDemo((s) => s.traceShown)
-  const m = KIND_META[step.kind]
-  const Icon = m.icon
-  const blocked = step.kind === "blocked"
-  const pulse = blocked && blockedPulse
-  const highlighted = hoverStep === step.n
+function PermissionRow({ p }: { p: Permission }) {
+  const [open, setOpen] = React.useState(false)
+  const writeEnabled = useDemo((s) => s.writeEnabled)
+  const setWrite = useDemo((s) => s.setWrite)
+  const overrides = useDemo((s) => s.overrides)
+  const s = SOURCE_BY_ID[p.sourceId]
+  const colour = colourFor(s.id, CURRENT_USER.id, overrides)
+  const access: Access = p.adjustable === "write" && !writeEnabled ? "read" : p.access
+  const name = colour === "black" ? `Restricted · ${s.name.replace(" data room", "")}` : s.name
   return (
-    <motion.li
-      id={`trace-step-${step.n}`}
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className={cn("rounded-lg border bg-card px-3 py-2 transition-shadow duration-150", blocked && "border-abort/40", pulse && "animate-flashred", highlighted && "ring-2 ring-ring ring-offset-2 ring-offset-background")}
-    >
-      <div className="flex items-start gap-2.5">
-        <span className="mt-0.5 w-7 shrink-0 font-mono text-[11px] text-muted-foreground tabular">[{step.n}]</span>
-        <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", m.cls)} />
+    <li className="px-4 py-2.5">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 text-left" aria-expanded={open}>
+        <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform", open && "rotate-180")} />
         <div className="min-w-0 flex-1">
-          <div className={cn("text-sm font-medium leading-5", blocked && "text-abort")}>{step.title}</div>
-          <div className="text-xs leading-5 text-muted-foreground">{step.detail}</div>
-          <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground" title={step.path}>
-            {step.path}
+          <div className="flex items-center gap-2">
+            <span className="truncate text-sm font-medium">{name}</span>
+            <ColourPill colour={colour} className="h-[18px] px-1.5 text-[10px]" />
           </div>
-          {blocked && step.policyId && (
-            <AnimatePresence>
-              {(blockedPulse || traceShown > step.n) && (
-                <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="mt-2 rounded-md border border-abort/30 bg-abort-soft px-2.5 py-2 text-xs">
-                  <div className="flex items-center gap-1.5 font-medium text-abort">
-                    <Lock className="h-3 w-3" /> Denied at the Datasite group
-                  </div>
-                  <div className="mt-0.5 text-foreground">{POLICY_BY_ID[step.policyId].rule}</div>
-                  <div className="mt-0.5 text-muted-foreground">Logged A-0124 · the agent continued without it</div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
+          <div className="truncate text-xs text-muted-foreground">{s.system}</div>
         </div>
-      </div>
-    </motion.li>
-  )
-}
-
-function CitationChip({ n, label }: { n: number; label: string }) {
-  const setHover = useDemo((s) => s.setHover)
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onMouseEnter={() => setHover(n)}
-          onMouseLeave={() => setHover(null)}
-          onClick={() => document.getElementById(`trace-step-${n}`)?.scrollIntoView({ behavior: "smooth", block: "center" })}
-          className="inline-flex h-5 max-w-[220px] items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground transition-colors hover:border-signal/40 hover:bg-signal-soft hover:text-signal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={`Citation ${label}, trace step ${n}`}
-        >
-          <span className="opacity-60">[{n}]</span>
-          <span className="truncate">{label}</span>
-        </button>
-      </TooltipTrigger>
-      <TooltipContent>{label} · trace step {n}</TooltipContent>
-    </Tooltip>
-  )
-}
-
-function BriefPane() {
-  const runPhase = useDemo((s) => s.runPhase)
-  const briefOrder = useDemo((s) => s.briefOrder)
-  const briefShown = useDemo((s) => s.briefShown)
-  const sent = useDemo((s) => s.sentForReview)
-  const sendForReview = useDemo((s) => s.sendForReview)
-  const scrollRef = React.useRef<HTMLDivElement>(null)
-  React.useEffect(() => {
-    const el = scrollRef.current
-    if (el && runPhase === "playing") el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
-  }, [briefShown, briefOrder, runPhase])
-  const deal = DEALS.atlas
-
-  return (
-    <Card className="flex min-h-0 flex-col overflow-hidden">
-      <CardHeader
-        title={
-          <span className="inline-flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" /> Draft · IC memo · Section 4
-          </span>
-        }
-        action={runPhase === "done" ? <Badge variant="verified">23 files cited</Badge> : runPhase === "playing" ? <Badge variant="signal">drafting</Badge> : null}
-      />
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
-        {briefOrder.length === 0 ? (
-          <div className="flex h-full min-h-[260px] flex-col items-center justify-center p-4 text-center">
-            <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
-              <FileText className="h-5 w-5" />
-            </span>
-            <div className="text-sm font-medium">The section drafts here, in the firm template.</div>
-            <div className="mt-1 max-w-xs text-xs text-muted-foreground">Every line carries a citation: file plus page or cell. Hover one to see the trace step it came from.</div>
-          </div>
-        ) : (
-          <div className="mx-auto max-w-[560px] px-7 py-6">
-            <div className="border-b pb-3">
-              <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">Calloway Hill Partners · Investment Committee · Confidential</div>
-              <div className="mt-2 font-serif text-[20px] font-semibold leading-7 tracking-[-0.01em]">
-                {deal.name} · {deal.company}
-              </div>
-              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-                <span>Section 4 · Financial summary</span>
-                <span>·</span>
-                <span>Draft v0.1</span>
-                <span>·</span>
-                <span>IC {deal.ic}</span>
-                <span>·</span>
-                <span>template ic-memo-v4</span>
-              </div>
-            </div>
-            <div className="space-y-5 pt-4">
-              {briefOrder.map((id) => {
-                const block = BRIEF.find((b) => b.id === id)
-                if (!block) return null
-                const shown = briefShown[id] ?? 0
-                const done = shown >= block.text.length
-                return (
-                  <motion.div key={id} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, ease: "easeOut" }}>
-                    <div className="mb-1 flex items-center gap-2">
-                      <div className="font-serif text-[15px] font-semibold">{block.heading}</div>
-                      {done && block.unresolved && (
-                        <Badge variant="flagged" className="gap-1">
-                          <AlertTriangle className="h-3 w-3" /> Unresolved · {block.unresolved.a} vs {block.unresolved.b}
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="font-serif text-[14px] leading-[1.65]">
-                      {block.text.slice(0, shown)}
-                      {!done && <span className="ml-0.5 inline-block h-4 w-[2px] translate-y-0.5 animate-cursor-blink bg-foreground" />}
-                    </p>
-                    {done && (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {block.cites.map((c) => (
-                          <CitationChip key={c.label} n={c.n} label={c.label} />
-                        ))}
-                      </div>
-                    )}
-                  </motion.div>
-                )
-              })}
-            </div>
-          </div>
+        <Badge variant={ACCESS_VARIANT[access]} className="w-[108px] justify-center">
+          {access === "none" && <Lock className="h-3 w-3" />}
+          {ACCESS_LABEL[access]}
+        </Badge>
+        <span className="hidden w-[128px] items-center gap-1 text-[11px] text-muted-foreground lg:inline-flex">
+          <ShieldCheck className="h-3 w-3 text-verified" /> Enforced at source
+        </span>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.18 }} className="overflow-hidden">
+            <div className="ml-6 mt-2 rounded-md border bg-muted/40 px-3 py-2 text-xs leading-5">{p.how}</div>
+          </motion.div>
         )}
-      </div>
-      {runPhase === "done" && (
-        <div className="flex items-center gap-2 border-t bg-muted/30 px-4 py-2.5">
-          <span className="text-xs text-muted-foreground">Nothing was written to the data room. The draft lives in Enakt until the team accepts it.</span>
-          <Button size="sm" variant={sent ? "outline" : "signal"} className="ml-auto" onClick={sendForReview} disabled={sent} id="send-review">
-            {sent ? <Check /> : <Send />} {sent ? "Sent to deal team" : "Send to deal team for review"}
-          </Button>
+      </AnimatePresence>
+      {p.adjustable === "write" && (
+        <div className="ml-6 mt-2 flex items-center gap-3 rounded-md border bg-card px-3 py-2 text-xs">
+          <Switch checked={writeEnabled} onCheckedChange={setWrite} aria-label="Post screens to DealCloud" id="write-toggle" />
+          <span className="flex-1">
+            <span className="font-medium">Post screens to DealCloud</span>
+            <span className="text-muted-foreground"> · {writeEnabled ? "on. Each screen lands on the deal record." : "off. Screens come to Maya’s inbox first."}</span>
+          </span>
+          <span className="text-muted-foreground">Changeable any time</span>
         </div>
       )}
-    </Card>
+    </li>
   )
 }
 
-function RunTab() {
-  const runPhase = useDemo((s) => s.runPhase)
-  const traceShown = useDemo((s) => s.traceShown)
-  const startRun = useDemo((s) => s.startRun)
-  const pauseRun = useDemo((s) => s.pauseRun)
-  const resumeRun = useDemo((s) => s.resumeRun)
-  const liveAgents = useDemo((s) => s.liveAgents)
-  const running = runPhase === "playing" || runPhase === "paused"
-  const blockedPulse = useDemo((s) => s.blockedPulse)
-  const live = liveAgents.includes("atlas-memo-agent")
-  const traceRef = React.useRef<HTMLOListElement>(null)
-  React.useEffect(() => {
-    const el = traceRef.current
-    if (!el || runPhase !== "playing") return
-    const t = setTimeout(() => el.scrollTo({ top: el.scrollHeight, behavior: "smooth" }), 60)
-    return () => clearTimeout(t)
-  }, [traceShown, runPhase, blockedPulse])
-
-  return (
-    <div className="flex h-[calc(100vh-14rem)] min-h-[520px] flex-col">
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="flex min-h-0 flex-col gap-3">
-          <div className="rounded-lg border bg-card p-3 shadow-sm">
-            <div className="mb-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <ActorAvatar id="ellen" size="xs" /> Ellen Marsh · prefilled from request R-3
-            </div>
-            <textarea value={RUN_PROMPT} readOnly rows={2} aria-label="Prompt" className="w-full resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-muted-foreground" />
-            <div className="mt-2 flex items-center gap-2 border-t pt-2">
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Cloud className="h-3 w-3" /> {MODEL.name}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <Lock className="h-3 w-3" /> Project Atlas · read-only
-              </span>
-              {!live && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-flagged-soft px-2 text-[11px] text-flagged">CR-7 not merged · dry-run scope</span>
-                  </TooltipTrigger>
-                  <TooltipContent>Until CR-7 merges, runs replay against the proposed scope and nothing is read for real.</TooltipContent>
-                </Tooltip>
-              )}
-              <div className="flex-1" />
-              {runPhase === "idle" && (
-                <Button size="sm" variant="signal" onClick={startRun} id="run-agent">
-                  <Play /> Run
-                </Button>
-              )}
-              {runPhase === "playing" && (
-                <Button size="sm" variant="outline" onClick={pauseRun}>
-                  <Pause /> Pause
-                </Button>
-              )}
-              {runPhase === "paused" && (
-                <Button size="sm" variant="signal" onClick={resumeRun}>
-                  <Play /> Resume
-                </Button>
-              )}
-              {runPhase === "done" && (
-                <Button size="sm" variant="outline" onClick={startRun} id="run-agent">
-                  <RotateCcw /> Run again
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <CardHeader
-              title="Trace"
-              action={
-                <span className="text-xs text-muted-foreground tabular">
-                  {traceShown} of {TRACE.length} steps
-                </span>
-              }
-            />
-            <ol ref={traceRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3 scrollbar-thin">
-              {traceShown === 0 && (
-                <li className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
-                  <span className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-signal-soft text-signal">
-                    <Bot className="h-5 w-5" />
-                  </span>
-                  <div className="text-sm font-medium">No run yet</div>
-                  <div className="mt-1 max-w-xs text-xs text-muted-foreground">Every scope check, read, block and held value shows here with its path, as it happens.</div>
-                </li>
-              )}
-              {TRACE.slice(0, traceShown).map((step) => (
-                <TraceRow key={step.n} step={step} />
-              ))}
-              {running && traceShown < TRACE.length && (
-                <li className="flex items-center gap-2 px-3 py-1 text-xs text-muted-foreground">
-                  <span className="h-1.5 w-1.5 animate-pulsedot rounded-full bg-signal" /> {runPhase === "paused" ? "Paused" : "Working…"}
-                </li>
-              )}
-            </ol>
-          </Card>
-        </div>
-        <BriefPane />
-      </div>
-      <div className="mt-4 flex items-center gap-2 border-t pt-3 font-mono text-[11px] text-muted-foreground">
-        {runPhase === "done" ? (
-          <>
-            <span className="h-1.5 w-1.5 rounded-full bg-verified" /> {RUN_FOOTER}
-          </>
-        ) : running ? (
-          <>
-            <span className="h-1.5 w-1.5 animate-pulsedot rounded-full bg-signal" /> Running in the {MODEL.tenant}… · Enakt Inc. accessed nothing
-          </>
-        ) : (
-          <>
-            <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50" /> Idle · {MODEL.name} ({MODEL.tenant}) · Enakt Inc. accessed nothing
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function WaitingRunTab({ agentId }: { agentId: string }) {
-  const a = AGENTS[agentId]
-  const status = a.status ?? "queued"
-  const p = AGENT_POLICY[agentId]
+function PermissionsTab() {
+  const [showOut, setShowOut] = React.useState(false)
+  const inScope = PERMISSIONS.filter((p) => p.inScope)
+  const excluded = PERMISSIONS.filter((p) => !p.inScope && (p.sourceId === "dr-atlas" || p.sourceId === "lp-records"))
+  const out = PERMISSIONS.filter((p) => !p.inScope && !excluded.includes(p))
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border bg-card p-3 shadow-sm">
-        <textarea disabled rows={2} placeholder={status === "live" ? "This agent runs when a request needs scoping." : "This agent has no connection yet."} aria-label="Prompt" className="w-full resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-muted-foreground" />
-        <div className="mt-2 flex items-center gap-2 border-t pt-2">
-          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <Cloud className="h-3 w-3" /> {MODEL.name}
-          </span>
-          <div className="flex-1" />
-          <AgentStatusPill status={status} />
-        </div>
-      </div>
-      <Card className="flex items-center gap-3 p-4">
-        <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg", status === "blocked" ? "bg-abort-soft text-abort" : "bg-signal-soft text-signal")}>
-          {status === "blocked" ? <Lock className="h-4 w-4" /> : <CalendarClock className="h-4 w-4" />}
-        </span>
-        <div className="min-w-0">
-          <div className="text-sm font-medium">{p.readable}</div>
-          <div className="text-xs text-muted-foreground">{a.purpose}</div>
-        </div>
-        {status !== "live" && (
-          <Button asChild size="sm" variant="outline" className="ml-auto">
-            <Link href={href("/rollout")}>Rollout plan</Link>
-          </Button>
+      <Card>
+        <CardHeader title="What the agent can touch" action={<span className="text-xs text-muted-foreground">write is limited to posting screens</span>} />
+        <ul className="divide-y">
+          {inScope.map((p) => (
+            <PermissionRow key={p.sourceId} p={p} />
+          ))}
+        </ul>
+      </Card>
+      <Card>
+        <CardHeader title="Excluded by policy" action={<span className="text-xs text-muted-foreground">no way to read these, enforced by the source&apos;s own access rules</span>} />
+        <ul className="divide-y">
+          {excluded.map((p) => (
+            <PermissionRow key={p.sourceId} p={p} />
+          ))}
+        </ul>
+      </Card>
+      <Card>
+        <button type="button" onClick={() => setShowOut((o) => !o)} className="flex w-full items-center justify-between px-4 py-3 text-sm" aria-expanded={showOut}>
+          <span className="font-medium">Not in scope ({out.length})</span>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", showOut && "rotate-180")} />
+        </button>
+        {showOut && (
+          <ul className="divide-y border-t">
+            {out.map((p) => (
+              <PermissionRow key={p.sourceId} p={p} />
+            ))}
+          </ul>
         )}
       </Card>
     </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Scope and History
-// ---------------------------------------------------------------------------
-
-function ScopeTab({ agentId }: { agentId: string }) {
-  const matrix = useDemo((s) => s.matrix)
-  const liveAgents = useDemo((s) => s.liveAgents)
-  const row = matrix[agentId]
-  const a = AGENTS[agentId]
-  const p = AGENT_POLICY[agentId]
-  const scope = a.scope ?? []
-  const live = liveAgents.includes(agentId) || a.status === "live"
-  const policies = p.ruleIds.map((id) => POLICY_BY_ID[id])
-  return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <Card>
-        <CardHeader title="Access by deal" />
-        <ul className="divide-y">
-          {RESOURCES.map((r) => {
-            const level = row?.[r.id] ?? "none"
-            return (
-              <li key={r.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
-                <span>{r.label}</span>
-                <Badge variant={level === "none" ? "gap" : level === "own" ? "signal" : level === "propose" ? "flagged" : level === "approve" ? "verified" : "outline"}>{ACCESS_LABEL[level]}</Badge>
-              </li>
-            )
-          })}
-        </ul>
-        <div className="flex items-center gap-2 border-t bg-muted/30 px-4 py-2 text-[11px] text-muted-foreground">
-          <Cloud className="h-3 w-3" /> {MODEL.name} · {MODEL.tenant} · {MODEL.note}
-        </div>
-      </Card>
-      <div className="space-y-4">
-        <Card>
-          <CardHeader title={live ? "Sources it can read" : "Sources it would read"} action={<span className="text-xs text-muted-foreground tabular">{scope.length} of {SOURCES.length}</span>} />
-          {scope.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-muted-foreground">No sources. This agent reads metadata only.</div>
-          ) : (
-            <ul className="divide-y">
-              {scope.map((id) => {
-                const s = SOURCE_BY_ID[id]
-                return (
-                  <li key={id} className="flex items-center gap-2.5 px-4 py-2 text-sm">
-                    <SourceIcon type={s.type} size={13} />
-                    <span className="flex-1 truncate">{s.name}</span>
-                    <span className="hidden truncate font-mono text-[10px] text-muted-foreground xl:inline">{s.enforcement}</span>
-                    <VerdictPill verdict={s.verdict} icon={false} />
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-        </Card>
-        <Card>
-          <CardHeader title="Policies that apply" />
-          <ul className="divide-y">
-            {policies.map((pol) => (
-              <li key={pol.id} className="flex items-start gap-2 px-4 py-2.5 text-sm">
-                <Lock className="mt-1 h-3.5 w-3.5 shrink-0 text-merged" />
-                <span>
-                  <span className="font-medium">{pol.rule}.</span> <span className="text-xs text-muted-foreground">{pol.sourceLabel}, {pol.date}.</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </Card>
-      </div>
-    </div>
-  )
-}
-
-function HistoryTable({ rows }: { rows: HistoryRow[] }) {
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow className="hover:bg-transparent">
-          <TableHead className="w-[170px]">When</TableHead>
-          <TableHead>Prompt</TableHead>
-          <TableHead className="w-[90px] text-right">Cited</TableHead>
-          <TableHead className="w-[100px]">Blocked</TableHead>
-          <TableHead className="w-[80px] text-right">Time</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((r) => (
-          <TableRow key={r.id}>
-            <TableCell className="text-xs text-muted-foreground tabular">{absoluteTime(r.at)}</TableCell>
-            <TableCell className="text-sm">{r.prompt}</TableCell>
-            <TableCell className="text-right font-mono text-xs tabular">{r.cites}</TableCell>
-            <TableCell>{r.blocked > 0 ? <Badge variant="abort">{r.blocked} blocked</Badge> : <span className="text-xs text-muted-foreground">none</span>}</TableCell>
-            <TableCell className="text-right font-mono text-xs text-muted-foreground tabular">{r.ms}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  )
-}
-
-function HistoryTab({ agentId }: { agentId: string }) {
-  const runPhase = useDemo((s) => s.runPhase)
-  const base = RUN_HISTORY[agentId] ?? []
-  const rows: HistoryRow[] = agentId === "atlas-memo-agent" && runPhase === "done" ? [{ id: "r-1", at: new Date(NOW.getTime() + 4 * 60_000), prompt: RUN_PROMPT, cites: 23, blocked: 1, ms: "9.4s" }, ...base] : base
+function EvaluationTab() {
+  const deployed = useDemo((s) => s.deployStatus === "deployed")
+  const runDone = useDemo((s) => s.seq.run === "done")
+  if (!deployed) {
+    return <EmptyState icon={ShieldCheck} title="Evaluation not started" description={`Test set ready: ${BUILD_STEPS[6].result}. Runs on first deploy, then on every reviewed screen.`} />
+  }
   return (
     <Card>
-      <CardHeader title="Run history" action={<span className="text-xs text-muted-foreground">Every run is in the audit log</span>} />
-      {rows.length === 0 ? (
-        <div className="p-6">
-          <EmptyState icon={History} title="No runs yet" description={agentId === "atlas-memo-agent" ? "The first real run lands here once CR-7 merges and Ellen's prompt is sent." : "This agent has not been connected to any source, so it has never run."} />
-        </div>
-      ) : (
-        <HistoryTable rows={rows} />
-      )}
+      <CardHeader title="Agreement with partner decisions" action={<span className="text-xs text-muted-foreground">illustrative</span>} />
+      <div className="p-4 text-sm">
+        <p className="text-muted-foreground">{runDone ? "1 screen produced, awaiting Maya’s review. The trend below is what the firm’s trained screener shows after 120 reviewed screens." : "Deployed. The first screen has not run yet."}</p>
+        <ul className="mt-3 grid grid-cols-5 gap-2 text-center">
+          {EVAL_TREND.map((e) => (
+            <li key={e.screens} className="rounded-md border bg-muted/30 px-2 py-2">
+              <div className="font-mono text-lg font-medium tabular text-verified">{e.agreement}%</div>
+              <div className="text-[11px] text-muted-foreground">{e.screens} screens</div>
+            </li>
+          ))}
+        </ul>
+      </div>
     </Card>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
+function ActivityTab() {
+  const extraActivity = useDemo((s) => s.extraActivity)
+  const activity = React.useMemo(() => [...extraActivity, ...ACTIVITY], [extraActivity])
+  const rows = activity.filter((a) => a.text.toLowerCase().includes("cim screener") || a.text.toLowerCase().includes("juniper") || a.kind === "blocked")
+  if (rows.length === 0) return <EmptyState icon={ShieldCheck} title="No activity yet" description="Every read, block and post by this agent shows here with its source." />
+  return (
+    <Card>
+      <ul className="divide-y">
+        {rows.map((a) => (
+          <li key={a.id} className="flex items-start gap-2.5 px-4 py-2.5 text-sm">
+            <ActorAvatar id={a.actorId} size="sm" className="mt-0.5" />
+            <span className="min-w-0 flex-1 leading-5">
+              <ActorName id={a.actorId} /> <span className={cn(a.kind === "blocked" ? "text-abort" : "text-muted-foreground")}>{a.text}</span>
+            </span>
+            <span className="shrink-0 text-xs text-muted-foreground tabular">{relativeTime(a.at)}</span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
 
 export default function AgentPage() {
   const params = useParams<{ agent: string }>()
   const agentId = params?.agent ?? ""
-  const agent = AGENTS[agentId]
-  const liveAgents = useDemo((s) => s.liveAgents)
+  const heroStage = useDemo((s) => s.heroStage)
+  const deployed = useDemo((s) => s.deployStatus === "deployed")
+  const isHero = agentId === HERO.id
+  const other = OTHER_AGENTS.find((a) => a.id === agentId)
 
-  if (!agent) {
+  if (!isHero && !other) {
     return (
       <div className="mx-auto w-full max-w-6xl p-6">
-        <EmptyState
-          icon={Bot}
-          title="No such agent"
-          description="Agents in this workspace are listed on the Agents page."
-          action={
-            <Button asChild variant="outline" size="sm">
-              <Link href={href("/agents")}>
-                <ArrowLeft /> All agents
-              </Link>
-            </Button>
-          }
-        />
+        <EmptyState icon={ShieldCheck} title="No such agent" description="Agents in this workspace are listed on the Agents page." action={<Button asChild variant="outline" size="sm"><Link href={href("/agents")}><ArrowLeft /> All agents</Link></Button>} />
       </div>
     )
   }
 
-  const actsFor = agent.actsFor ? getActor(agent.actsFor) : null
-  const status = liveAgents.includes(agentId) ? "live" : (agent.status ?? "queued")
+  if (other) {
+    return (
+      <div className="mx-auto w-full max-w-6xl space-y-5 p-6">
+        <Link href={href("/agents")} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-3 w-3" /> Agents
+        </Link>
+        <PageHeader title={other.name} description={other.purpose} actions={<StagePill stage={other.stage} />} />
+        <EmptyState icon={ShieldCheck} title={`${other.name} is ${other.stage === "requested" ? "waiting to be scoped" : other.stage}`} description="The security review, evaluation and activity appear once it is built." />
+      </div>
+    )
+  }
 
+  const stage = heroStage ?? "requested"
   return (
     <div className="mx-auto w-full max-w-6xl space-y-5 p-6">
       <Link href={href("/agents")} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-3 w-3" /> Agents
       </Link>
-      <div className="flex items-start gap-3">
-        <ActorAvatar id={agent.id} size="lg" />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="font-display font-mono text-[20px] font-medium leading-7 tracking-[-0.01em]">{agent.name}</h1>
-            <AgentStatusPill status={status} />
-            <ModelBadge />
-            {actsFor && (
-              <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted px-2 py-0.5 text-xs">
-                <ActorAvatar id={actsFor.id} size="xs" /> requested by <ActorName id={actsFor.id} withModel={false} />
-              </span>
-            )}
-          </div>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {agent.role} · {agent.purpose}
-          </p>
-        </div>
+      <PageHeader
+        title={
+          <span className="inline-flex items-center gap-2.5">
+            {HERO.name} <StagePill stage={stage} />
+          </span>
+        }
+        description={HERO.purpose}
+        actions={
+          deployed ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href={href("/agents/cim-screener/run")}>See it run on a new CIM</Link>
+            </Button>
+          ) : (
+            <Button asChild size="sm" variant="signal">
+              <Link href={href("/agents/cim-screener/deploy")} id="to-deploy">
+                <Rocket /> Deploy to firm
+              </Link>
+            </Button>
+          )
+        }
+      />
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        Requested by <ActorAvatar id={HERO.requesterId} size="xs" /> <ActorName id={HERO.requesterId} className="text-xs" /> · request {HERO.requestId.toUpperCase()} · reviewed by Maya every screen for two weeks, then a weekly sample
       </div>
-
-      <Tabs defaultValue="run">
+      <Tabs defaultValue="permissions">
         <UnderlineTabsList>
-          <UnderlineTabsTrigger value="run">Run</UnderlineTabsTrigger>
-          <UnderlineTabsTrigger value="scope">Scope</UnderlineTabsTrigger>
-          <UnderlineTabsTrigger value="history">History</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="permissions">Permissions</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="evaluation">Evaluation</UnderlineTabsTrigger>
+          <UnderlineTabsTrigger value="activity">Activity</UnderlineTabsTrigger>
         </UnderlineTabsList>
-        <TabsContent value="run">{agent.id === "atlas-memo-agent" ? <RunTab /> : <WaitingRunTab agentId={agent.id} />}</TabsContent>
-        <TabsContent value="scope">
-          <ScopeTab agentId={agent.id} />
+        <TabsContent value="permissions">
+          <PermissionsTab />
         </TabsContent>
-        <TabsContent value="history">
-          <HistoryTab agentId={agent.id} />
+        <TabsContent value="evaluation">
+          <EvaluationTab />
+        </TabsContent>
+        <TabsContent value="activity">
+          <ActivityTab />
         </TabsContent>
       </Tabs>
     </div>

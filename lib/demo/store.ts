@@ -1,235 +1,168 @@
 /**
- * One Zustand store for the whole demo. Every page reads from it, which is what keeps the
- * canvas continuous across routes. Persisted to sessionStorage so an accidental reload does
- * not lose a take; Shift+R wipes it.
+ * One Zustand store for the whole demo. Every page reads from it, which keeps the map continuous
+ * across routes. Persisted to sessionStorage so an accidental reload does not lose a take; the reset
+ * key wipes it back to the start of beat 1.
  */
 
 import { create } from "zustand"
 import { createJSONStorage, persist } from "zustand/middleware"
 import { toast } from "sonner"
-import {
-  AUDIT,
-  CR,
-  INITIAL_MATRIX,
-  METER,
-  NOW,
-  POLICY_BY_ID,
-  SOURCES,
-  type AccessLevel,
-  type AuditEntry,
-  type LaneId,
-  type Matrix,
-  type PlanColumn,
-  type ResourceId,
-  type Verdict,
-  type Viewer,
-  href,
-} from "./fixtures"
-import { buildRequestTimeline, buildRunTimeline, type PersonStatus, type TimelineEvent, type TranscriptEntry } from "./script"
+import { ACTIVITY, DEPLOY, NOW, READINESS, ROLLOUT, SCOPE, type Activity, type Colour, type SourceId, type Stage } from "./fixtures"
+import { TIMELINES, type SeqName, type TimelineEvent } from "./script"
 import { TimelinePlayer, type PlayerStatus } from "./player"
 import { runProgress } from "./sim"
 
 export type Phase = "idle" | "playing" | "paused" | "done"
-export type ConnectStatus = "open" | "merging" | "merged"
 export type Speed = 1 | 1.5 | 2
-
-export type NodeState = {
-  verdict: Verdict
-  placeholder?: { label: string; hint: string }
-}
+export type QA = { id: string; chips: boolean; picked: boolean }
+export type OutState = { order: string[]; shown: Record<string, number> }
 
 export type DemoState = {
   hydrated: boolean
+  seq: Record<SeqName, Phase>
 
-  // Request R-3
-  requestPhase: Phase
-  scan: "idle" | "running" | "done"
-  scanSystems: number
-  scanFiles: number
-  plan: Record<PlanColumn, string[]>
-  people: Record<string, PersonStatus>
-  transcript: TranscriptEntry[]
-  openQuestions: Record<string, "open" | "resolved">
-
-  // Canvas
-  lanes: LaneId[]
-  lanePolicies: Partial<Record<LaneId, string[]>>
-  nodes: Partial<Record<string, NodeState>>
-  edges: string[]
-  policies: string[]
-  agents: string[]
-  liveAgents: string[]
-  progress: number
-
-  // Connection request CR-7
-  crStatus: ConnectStatus
-  crPct: number
+  // beat 2
+  tourStep: number
+  // beat 3
+  askTyped: number
+  askStatus: "idle" | "working" | "done"
+  // beat 4
+  qa: QA[]
+  lit: SourceId[]
+  excluded: SourceId[]
+  confirmations: Record<string, "pending" | "done">
+  // beat 5
+  buildStep: number
+  // hero agent
+  heroStage: Stage | null
+  // beat 6
+  writeEnabled: boolean
+  // beat 7
+  deployStatus: "open" | "deploying" | "deployed"
+  deployPct: number
   approvals: string[]
-  milestonesDone: string[]
-
-  // Policies matrix
-  matrix: Matrix
-  draft: Matrix | null
-
-  // Agent run
-  runPhase: Phase
-  traceShown: number
+  overrides: Partial<Record<SourceId, Colour>>
+  readiness: number
+  rolloutDay: number
+  // beat 8
+  runStep: number
   blockedPulse: boolean
-  briefOrder: string[]
-  briefShown: Record<string, number>
-  hoverStep: number | null
-  sentForReview: boolean
+  fresh: OutState
+  trained: OutState
+  compare: boolean
+  // close
+  endCard: boolean
 
-  // Audit and shell
-  extraAudit: AuditEntry[]
-  viewAs: Viewer
+  extraActivity: Activity[]
   rec: boolean
   speed: Speed
   sidebarCollapsed: boolean
-  notificationsRead: boolean
 }
 
 export type DemoActions = {
   applyEvent: (e: TimelineEvent) => void
   reset: () => void
-  startRequest: () => void
-  pauseRequest: () => void
-  resumeRequest: () => void
-  skipRequest: () => void
-  startRun: () => void
-  pauseRun: () => void
-  resumeRun: () => void
+  startSeq: (name: SeqName) => void
+  skipSeq: (name: SeqName) => void
   togglePause: () => boolean
-  approveAs: (id: string) => Promise<void>
-  setCell: (actor: string, resource: ResourceId, level: AccessLevel) => void
-  discardDraft: () => void
-  saveDraft: () => void
-  setHover: (n: number | null) => void
-  setViewAs: (v: Viewer) => void
+  setWrite: (v: boolean) => void
+  deploy: () => Promise<void>
+  setCompare: (v: boolean) => void
+  setEndCard: (v: boolean) => void
   setRec: (v: boolean) => void
   toggleRec: () => void
   setSpeed: (s: Speed) => void
   setSidebar: (v: boolean) => void
-  readNotifications: () => void
-  addAudit: (e: AuditEntry) => void
-  sendForReview: () => void
+  addActivity: (a: Activity) => void
 }
+
+const EMPTY_OUT: OutState = { order: [], shown: {} }
 
 const INITIAL: DemoState = {
   hydrated: false,
-  requestPhase: "idle",
-  scan: "idle",
-  scanSystems: 0,
-  scanFiles: 0,
-  plan: { needs: [], ask: [], never: [] },
-  people: {},
-  transcript: [],
-  openQuestions: {},
-  lanes: [],
-  lanePolicies: {},
-  nodes: {},
-  edges: [],
-  policies: [],
-  agents: [],
-  liveAgents: [],
-  progress: METER.before,
-  crStatus: "open",
-  crPct: 0,
-  approvals: [],
-  milestonesDone: [],
-  matrix: INITIAL_MATRIX,
-  draft: null,
-  runPhase: "idle",
-  traceShown: 0,
+  seq: { tour: "idle", ask: "idle", scope: "idle", build: "idle", run: "idle" },
+  tourStep: -1,
+  askTyped: 0,
+  askStatus: "idle",
+  qa: [],
+  lit: [],
+  excluded: [],
+  confirmations: {},
+  buildStep: 0,
+  heroStage: null,
+  writeEnabled: true,
+  deployStatus: "open",
+  deployPct: 0,
+  approvals: ["ruth"],
+  overrides: {},
+  readiness: READINESS.before,
+  rolloutDay: ROLLOUT.day,
+  runStep: 0,
   blockedPulse: false,
-  briefOrder: [],
-  briefShown: {},
-  hoverStep: null,
-  sentForReview: false,
-  extraAudit: [],
-  viewAs: "dana",
+  fresh: EMPTY_OUT,
+  trained: EMPTY_OUT,
+  compare: false,
+  endCard: false,
+  extraActivity: [],
   rec: false,
   speed: 1,
   sidebarCollapsed: false,
-  notificationsRead: false,
 }
 
-// Players live outside the persisted state.
-let requestPlayer: TimelinePlayer | null = null
-let runPlayer: TimelinePlayer | null = null
+/** State each sequence owns and resets when it starts again. */
+const SEQ_KEYS: Record<SeqName, (keyof DemoState)[]> = {
+  tour: ["tourStep"],
+  ask: ["askTyped", "askStatus"],
+  scope: ["qa", "lit", "excluded", "confirmations"],
+  build: ["buildStep"],
+  run: ["runStep", "blockedPulse", "fresh", "trained", "compare"],
+}
+
+const players: Partial<Record<SeqName, TimelinePlayer>> = {}
 
 function reduceEvent(s: DemoState, e: TimelineEvent): Partial<DemoState> {
   switch (e.type) {
-    case "scan":
-      return e.status === "running" ? { scan: "running", scanSystems: 0, scanFiles: 0 } : { scan: "done" }
-    case "scan:progress":
-      return { scanSystems: e.systems, scanFiles: e.files }
-    case "plan:add":
-      return s.plan[e.column].includes(e.id) ? {} : { plan: { ...s.plan, [e.column]: [...s.plan[e.column], e.id] } }
-    case "person":
-      return { people: { ...s.people, [e.id]: e.status } }
-    case "entry:add":
-      return s.transcript.some((x) => x.id === e.entry.id) ? {} : { transcript: [...s.transcript, e.entry] }
-    case "entry:progress":
-      return { transcript: s.transcript.map((x) => (x.id === e.id ? { ...x, shown: e.shown } : x)) }
-    case "entry:done":
-      return { transcript: s.transcript.map((x) => (x.id === e.id ? { ...x, shown: x.text.length, done: true } : x)) }
-    case "chip:add":
-      return { transcript: s.transcript.map((x) => (x.id === e.entryId && !x.chips.some((c) => c.id === e.chip.id) ? { ...x, chips: [...x.chips, e.chip] } : x)) }
-    case "question:add":
-      return { openQuestions: { ...s.openQuestions, [e.id]: "open" } }
-    case "progress":
-      return { progress: e.value }
-    case "request:done":
-      return { requestPhase: "done" }
-    case "canvas": {
-      const ev = e.event
-      switch (ev.type) {
-        case "lane:add":
-          return s.lanes.includes(ev.id) ? {} : { lanes: [...s.lanes, ev.id] }
-        case "source:add":
-          return { nodes: { ...s.nodes, [ev.id]: { verdict: ev.verdict ?? "unchecked" } } }
-        case "placeholder:add":
-          return { nodes: { ...s.nodes, [ev.id]: { verdict: "unchecked", placeholder: { label: ev.label, hint: ev.hint } } } }
-        case "placeholder:resolve":
-          return { nodes: { ...s.nodes, [ev.id]: { verdict: ev.verdict } } }
-        case "verdict:set": {
-          const n = s.nodes[ev.id]
-          if (!n) return {}
-          return { nodes: { ...s.nodes, [ev.id]: { ...n, verdict: ev.verdict } } }
-        }
-        case "edge:add":
-          return s.edges.includes(ev.id) ? {} : { edges: [...s.edges, ev.id] }
-        case "policy:add": {
-          const p = POLICY_BY_ID[ev.id]
-          const lanePolicies = { ...s.lanePolicies }
-          for (const l of p.governsLanes) {
-            const cur = lanePolicies[l] ?? []
-            if (!cur.includes(ev.id)) lanePolicies[l] = [...cur, ev.id]
-          }
-          return { policies: s.policies.includes(ev.id) ? s.policies : [...s.policies, ev.id], lanePolicies }
-        }
-        case "agent:add":
-          return s.agents.includes(ev.id) ? {} : { agents: [...s.agents, ev.id] }
-      }
-      return {}
-    }
-    case "trace:step":
-      return { traceShown: Math.max(s.traceShown, e.n), blockedPulse: false }
-    case "trace:pulse":
+    case "tour":
+      return { tourStep: e.step }
+    case "ask:typed":
+      return { askTyped: e.shown }
+    case "ask:status":
+      return e.status === "done" ? { askStatus: "done", heroStage: "requested" } : { askStatus: "working" }
+    case "qa:add":
+      return s.qa.some((q) => q.id === e.id) ? {} : { qa: [...s.qa, { id: e.id, chips: false, picked: false }] }
+    case "qa:chips":
+      return { qa: s.qa.map((q) => (q.id === e.id ? { ...q, chips: true } : q)) }
+    case "qa:pick":
+      return { qa: s.qa.map((q) => (q.id === e.id ? { ...q, chips: true, picked: true } : q)) }
+    case "scope:light":
+      return s.lit.includes(e.id) ? {} : { lit: [...s.lit, e.id] }
+    case "scope:exclude":
+      return s.excluded.includes(e.id) ? {} : { excluded: [...s.excluded, e.id] }
+    case "confirm":
+      return { confirmations: { ...s.confirmations, [e.id]: e.status } }
+    case "build:step":
+      return { buildStep: Math.max(s.buildStep, e.n) }
+    case "run:step":
+      return { runStep: Math.max(s.runStep, e.n), blockedPulse: false }
+    case "run:pulse":
       return { blockedPulse: true }
-    case "brief:block":
-      return s.briefOrder.includes(e.id) ? {} : { briefOrder: [...s.briefOrder, e.id], briefShown: { ...s.briefShown, [e.id]: 0 } }
-    case "brief:progress":
-      return { briefShown: { ...s.briefShown, [e.id]: e.shown } }
-    case "run:done":
-      return { runPhase: "done" }
+    case "out:block": {
+      const cur = s[e.side]
+      return cur.order.includes(e.id) ? {} : { [e.side]: { order: [...cur.order, e.id], shown: { ...cur.shown, [e.id]: 0 } } }
+    }
+    case "out:progress": {
+      const cur = s[e.side]
+      return { [e.side]: { ...cur, shown: { ...cur.shown, [e.id]: e.shown } } }
+    }
+    case "compare":
+      return { compare: true }
+    case "seq:done": {
+      const extra: Partial<DemoState> = e.seq === "scope" ? { heroStage: "scoping" } : e.seq === "build" ? { heroStage: "review" } : {}
+      return { seq: { ...s.seq, [e.seq]: "done" }, ...extra }
+    }
   }
   return {}
 }
-
-const REQUEST_KEYS: (keyof DemoState)[] = ["requestPhase", "scan", "scanSystems", "scanFiles", "plan", "people", "transcript", "openQuestions", "lanes", "lanePolicies", "nodes", "edges", "policies", "agents", "progress"]
-const RUN_KEYS: (keyof DemoState)[] = ["runPhase", "traceShown", "blockedPulse", "briefOrder", "briefShown", "hoverStep", "sentForReview"]
 
 function pick(keys: (keyof DemoState)[]): Partial<DemoState> {
   const out: Partial<DemoState> = {}
@@ -241,6 +174,9 @@ function statusToPhase(s: PlayerStatus): Phase {
   return s === "idle" ? "idle" : s === "playing" ? "playing" : s === "paused" ? "paused" : "done"
 }
 
+/** Stage the hero reaches when a sequence starts. */
+const STAGE_ON_START: Partial<Record<SeqName, Stage>> = { scope: "scoping", build: "building" }
+
 export const useDemo = create<DemoState & DemoActions>()(
   persist(
     (set, get) => ({
@@ -249,216 +185,106 @@ export const useDemo = create<DemoState & DemoActions>()(
       applyEvent: (e) => set((s) => reduceEvent(s, e)),
 
       reset: () => {
-        requestPlayer?.stop()
-        runPlayer?.stop()
-        requestPlayer = null
-        runPlayer = null
+        for (const k of Object.keys(players) as SeqName[]) players[k]?.stop()
+        for (const k of Object.keys(players) as SeqName[]) delete players[k]
         const { rec, sidebarCollapsed, speed } = get()
         set({ ...INITIAL, hydrated: true, rec, sidebarCollapsed, speed: rec ? 1.5 : speed })
       },
 
-      startRequest: () => {
+      startSeq: (name) => {
         const s = get()
-        if (s.requestPhase === "playing") return
-        requestPlayer?.stop()
-        // A re-run keeps the meter and the live agent where CR-7 left them.
-        const keepProgress = s.crStatus === "merged" ? { progress: METER.after } : {}
-        set({ ...pick(REQUEST_KEYS), ...keepProgress, requestPhase: "playing" })
-        requestPlayer = new TimelinePlayer(buildRequestTimeline(), (e) => get().applyEvent(e), {
+        if (s.seq[name] === "playing") return
+        players[name]?.stop()
+        const stage = STAGE_ON_START[name]
+        set({ ...pick(SEQ_KEYS[name]), seq: { ...s.seq, [name]: "playing" }, ...(stage ? { heroStage: stage } : {}) })
+        const p = new TimelinePlayer(TIMELINES[name](), (e) => get().applyEvent(e), {
           speed: () => get().speed,
           onStatus: (st) => {
-            if (st === "done") return // request:done sets the phase
-            set({ requestPhase: statusToPhase(st) })
+            if (st === "done") return // seq:done sets the phase
+            set({ seq: { ...get().seq, [name]: statusToPhase(st) } })
           },
         })
-        requestPlayer.start()
+        players[name] = p
+        p.start()
       },
-      pauseRequest: () => requestPlayer?.pause(),
-      resumeRequest: () => requestPlayer?.resume(),
-      skipRequest: () => {
+      skipSeq: (name) => {
         const s = get()
-        if (s.requestPhase === "done") return
-        if (!requestPlayer) {
-          set({ ...pick(REQUEST_KEYS), requestPhase: "playing" })
-          requestPlayer = new TimelinePlayer(buildRequestTimeline(), (e) => get().applyEvent(e))
+        if (s.seq[name] === "done") return
+        if (!players[name]) {
+          const stage = STAGE_ON_START[name]
+          set({ ...pick(SEQ_KEYS[name]), seq: { ...s.seq, [name]: "playing" }, ...(stage ? { heroStage: stage } : {}) })
+          players[name] = new TimelinePlayer(TIMELINES[name](), (e) => get().applyEvent(e))
         }
-        requestPlayer.skipToEnd()
-        set({ requestPhase: "done", progress: get().crStatus === "merged" ? METER.after : METER.before })
+        players[name]!.skipToEnd()
+        set({ seq: { ...get().seq, [name]: "done" } })
       },
-
-      startRun: () => {
-        const s = get()
-        if (s.runPhase === "playing") return
-        runPlayer?.stop()
-        set({ ...pick(RUN_KEYS), runPhase: "playing" })
-        runPlayer = new TimelinePlayer(buildRunTimeline(), (e) => get().applyEvent(e), {
-          speed: () => get().speed,
-          onStatus: (st) => {
-            if (st === "done") {
-              get().addAudit({
-                id: "A-0124",
-                at: new Date(NOW.getTime() + 4 * 60_000),
-                actorId: "atlas-memo-agent",
-                kind: "blocked",
-                text: "blocked: pull comparable deal metrics from Project Birch · policy deal-data-within-deal · draft returned with 23 citations",
-                path: "datasite://birch/** → denied at Datasite group",
-                href: href("/agents/atlas-memo-agent"),
-              })
-              return
-            }
-            set({ runPhase: statusToPhase(st) })
-          },
-        })
-        runPlayer.start()
-      },
-      pauseRun: () => runPlayer?.pause(),
-      resumeRun: () => runPlayer?.resume(),
-
       togglePause: () => {
         const s = get()
-        if (s.requestPhase === "playing" || s.requestPhase === "paused") {
-          requestPlayer?.toggle()
-          return true
-        }
-        if (s.runPhase === "playing" || s.runPhase === "paused") {
-          runPlayer?.toggle()
-          return true
+        for (const name of Object.keys(s.seq) as SeqName[]) {
+          if (s.seq[name] === "playing" || s.seq[name] === "paused") {
+            players[name]?.toggle()
+            return true
+          }
         }
         return false
       },
 
-      approveAs: async (id) => {
-        const s = get()
-        if (s.crStatus !== "open" || s.approvals.includes(id)) return
-        const approvals = [...s.approvals, id]
-        const approver = CR.approvers.find((a) => a.id === id)
-        set({ approvals })
-        get().addAudit({
-          id: `A-012${approvals.length}`,
-          at: new Date(NOW.getTime() + approvals.length * 60_000),
-          actorId: id,
-          kind: "approve",
-          text: `approved CR-${CR.number} as ${approver?.role.toLowerCase() ?? "approver"} · ${approvals.length} of ${CR.approvers.length}`,
-          href: href("/connections/cr-7"),
-        })
-        if (approvals.length < CR.approvers.length) {
-          toast(`Approved as ${approver ? approver.id === "ellen" ? "Ellen Marsh" : "Grace Liu" : id}`, { description: `${approvals.length} of ${CR.approvers.length} approvals. Waiting on the ${approvals.length === 1 ? "CCO" : "deal partner"}.` })
-          return
-        }
-        set({ crStatus: "merging", crPct: 0 })
-        await runProgress(1200, (pct) => set({ crPct: pct }))
-        const edges = [...get().edges]
-        for (const src of CR.sources) {
-          const id = `${CR.agentId}>${src}`
-          if (!edges.includes(id)) edges.push(id)
-        }
-        set({
-          crStatus: "merged",
-          crPct: 100,
-          edges,
-          liveAgents: [...new Set([...get().liveAgents, CR.agentId])],
-          progress: METER.after,
-          milestonesDone: [...new Set([...get().milestonesDone, "d15"])],
-        })
-        get().addAudit({
-          id: "A-0123",
-          at: new Date(NOW.getTime() + 3 * 60_000),
-          actorId: "grace",
-          kind: "connect",
-          text: `merged CR-${CR.number} · atlas-memo-agent connected to 4 Atlas sources, enforced at Datasite, SharePoint and DealCloud`,
-          href: href("/connections/cr-7"),
-        })
-        toast.success(`CR-${CR.number} merged`, { description: `atlas-memo-agent is live on Project Atlas. Firm AI-ready ${METER.before}% → ${METER.after}%. Day 15 milestone checked.` })
+      setWrite: (v) => {
+        set({ writeEnabled: v })
+        toast(v ? "Write to DealCloud on" : "Write to DealCloud off", { description: v ? "Screens post to the deal record again." : "Screens come to Maya's inbox first. Changed at the source, logged." })
       },
 
-      setCell: (actor, resource, level) => {
+      deploy: async () => {
         const s = get()
-        const base = s.draft ?? s.matrix
-        const draft: Matrix = { ...base, [actor]: { ...base[actor], [resource]: level } }
-        const same = Object.keys(draft).every((a) => Object.keys(draft[a]).every((r) => draft[a][r as ResourceId] === s.matrix[a][r as ResourceId]))
-        set({ draft: same ? null : draft })
-      },
-      discardDraft: () => set({ draft: null }),
-      saveDraft: () => {
-        const s = get()
-        if (!s.draft) return
-        let changed = 0
-        for (const a of Object.keys(s.draft)) for (const r of Object.keys(s.draft[a])) if (s.draft[a][r as ResourceId] !== s.matrix[a][r as ResourceId]) changed++
-        set({ matrix: s.draft, draft: null })
-        get().addAudit({
-          id: `A-013${s.extraAudit.length}`,
-          at: new Date(NOW.getTime() + 5 * 60_000),
-          actorId: "dana",
-          kind: "policy",
-          text: `changed ${changed} access rule${changed === 1 ? "" : "s"} · enforced at the source on save`,
-          href: href("/policies"),
-        })
-        toast.success("Policy saved", { description: `${changed} change${changed === 1 ? "" : "s"} pushed to Datasite, SharePoint and DealCloud. Logged to the audit trail.` })
+        if (s.deployStatus !== "open") return
+        set({ deployStatus: "deploying", deployPct: 0, approvals: [...new Set([...s.approvals, "maya"])] })
+        await runProgress(1300, (pct) => set({ deployPct: pct }))
+        set({ deployStatus: "deployed", deployPct: 100, heroStage: "deployed", overrides: { ...get().overrides, "deals-inbox": "yellow" }, readiness: READINESS.after, rolloutDay: ROLLOUT.liveDay })
+        get().addActivity({ id: "a-0110", at: new Date(NOW.getTime() + 3 * 60_000), actorId: "maya", kind: "deploy", text: `deployed CIM screener · ${DEPLOY.summary[0].value} sources connected, ${DEPLOY.summary[2].value} exclusions enforced at source` })
+        toast.success("CIM screener deployed", { description: `deals@ inbox is now connected. Firm AI-readiness ${READINESS.before}% → ${READINESS.after}%. First agent live, Day ${ROLLOUT.liveDay} of ${ROLLOUT.total}.` })
       },
 
-      setHover: (n) => set({ hoverStep: n }),
-      setViewAs: (v) => set({ viewAs: v }),
+      setCompare: (v) => set({ compare: v }),
+      setEndCard: (v) => set({ endCard: v }),
       setRec: (v) => set({ rec: v, speed: v ? 1.5 : 1 }),
       toggleRec: () => get().setRec(!get().rec),
       setSpeed: (speed) => {
         set({ speed })
-        requestPlayer?.retime()
-        runPlayer?.retime()
+        for (const k of Object.keys(players) as SeqName[]) players[k]?.retime()
       },
       setSidebar: (v) => set({ sidebarCollapsed: v }),
-      readNotifications: () => set({ notificationsRead: true }),
-      addAudit: (e) => set((s) => (s.extraAudit.some((x) => x.id === e.id) ? {} : { extraAudit: [e, ...s.extraAudit] })),
-      sendForReview: () => {
-        if (get().sentForReview) return
-        set({ sentForReview: true })
-        toast.success("Sent to the Atlas deal team", { description: "Ellen Marsh, Tom Becker and Nina Alvarez have the draft with every citation. Nothing was written to the data room." })
-      },
+      addActivity: (a) => set((s) => (s.extraActivity.some((x) => x.id === a.id) ? {} : { extraActivity: [a, ...s.extraActivity] })),
     }),
     {
-      name: "enakt-calloway-demo-v1",
-      storage: createJSONStorage(() => sessionStorage, {
-        reviver: (k, v) => (k === "at" && typeof v === "string" ? new Date(v) : v),
-      }),
+      name: "enakt-kestrel-demo-v1",
+      storage: createJSONStorage(() => sessionStorage, { reviver: (k, v) => (k === "at" && typeof v === "string" ? new Date(v) : v) }),
       skipHydration: true,
       partialize: (s) => {
-        const { hydrated: _h, hoverStep: _hs, blockedPulse: _bp, crPct: _cp, ...rest } = s
+        const { hydrated: _h, blockedPulse: _b, deployPct: _d, tourStep: _t, ...rest } = s
         void _h
-        void _hs
-        void _bp
-        void _cp
+        void _b
+        void _d
+        void _t
         return rest as unknown as DemoState
       },
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Partial<DemoState>
         const next: DemoState & DemoActions = { ...current, ...p, hydrated: true }
-        // A reload mid-script lands on the finished state. Nothing is half-done.
-        if (next.requestPhase === "playing" || next.requestPhase === "paused") {
-          let s: DemoState = { ...next, ...pick(REQUEST_KEYS) }
-          for (const e of buildRequestTimeline()) s = { ...s, ...reduceEvent(s, e) }
-          Object.assign(next, s, { requestPhase: "done", progress: next.crStatus === "merged" ? METER.after : METER.before })
+        // A reload mid-sequence lands on the finished state. Nothing is half-done.
+        for (const name of Object.keys(TIMELINES) as SeqName[]) {
+          if (next.seq[name] === "playing" || next.seq[name] === "paused") {
+            let s: DemoState = { ...next, ...pick(SEQ_KEYS[name]) }
+            for (const e of TIMELINES[name]()) s = { ...s, ...reduceEvent(s, e) }
+            Object.assign(next, s, { seq: { ...s.seq, [name]: "done" } })
+          }
         }
-        if (next.runPhase === "playing" || next.runPhase === "paused") {
-          let s: DemoState = { ...next, ...pick(RUN_KEYS) }
-          for (const e of buildRunTimeline()) s = { ...s, ...reduceEvent(s, e) }
-          Object.assign(next, s, { runPhase: "done" })
-        }
-        if (next.crStatus === "merging") {
-          next.crStatus = "open"
-          next.approvals = next.approvals.slice(0, 1)
-        }
+        if (next.deployStatus === "deploying") next.deployStatus = "open"
         return next
       },
     },
   ),
 )
 
-/** Finished request scene, derived from the state. */
-export const selectRequestDone = (s: DemoState) => s.requestPhase === "done"
-
-/** All audit entries, newest first. */
-export const selectAudit = (s: DemoState): AuditEntry[] => [...s.extraAudit, ...AUDIT]
-
-/** Sources on the canvas, in fixture order. */
-export const selectDiscovered = (s: DemoState) => SOURCES.filter((src) => s.nodes[src.id] && !s.nodes[src.id]?.placeholder)
-
-export { NOW }
+export const selectActivity = (s: DemoState): Activity[] => [...s.extraActivity, ...ACTIVITY]
+export const selectScopeDone = (s: DemoState) => s.seq.scope === "done"
+export { SCOPE, NOW }

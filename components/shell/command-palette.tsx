@@ -6,21 +6,19 @@ import { useTheme } from "next-themes"
 import { Moon, RotateCcw, Sun, Video } from "lucide-react"
 import { toast } from "sonner"
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandShortcut } from "@/components/ui/command"
-import { ActorAvatar } from "@/components/demo/actor"
-import { SourceIcon } from "@/components/demo/source-icon"
-import { AgentStatusPill, VerdictPill } from "@/components/demo/verdict-pill"
-import { AGENTS, AGENT_ORDER, CR, METER, PEOPLE, REQUEST, SOURCES, href } from "@/lib/demo/fixtures"
+import { ColourPill } from "@/components/demo/status-pill"
+import { CURRENT_USER, SOURCES, colourFor, href } from "@/lib/demo/fixtures"
 import { useDemo } from "@/lib/demo/store"
-import { NAV } from "./sidebar"
+import { BEATS } from "./app-shell"
 
 export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const router = useRouter()
   const reset = useDemo((s) => s.reset)
   const toggleRec = useDemo((s) => s.toggleRec)
   const rec = useDemo((s) => s.rec)
-  const nodes = useDemo((s) => s.nodes)
-  const liveAgents = useDemo((s) => s.liveAgents)
-  const requestDone = useDemo((s) => s.requestPhase === "done")
+  const overrides = useDemo((s) => s.overrides)
+  const startSeq = useDemo((s) => s.startSeq)
+  const setEndCard = useDemo((s) => s.setEndCard)
   const { resolvedTheme, setTheme } = useTheme()
 
   React.useEffect(() => {
@@ -41,59 +39,37 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Jump to a page, source, person or agent…" />
+      <CommandInput placeholder="Jump to a beat or a source…" />
       <CommandList>
         <CommandEmpty>No results.</CommandEmpty>
-        <CommandGroup heading="Pages">
-          {NAV.map((n) => (
-            <CommandItem key={n.href} value={`page ${n.label}`} onSelect={() => go(n.href)}>
-              <n.icon className="text-muted-foreground" />
-              {n.label}
-              {n.key && <CommandShortcut>{n.key}</CommandShortcut>}
+        <CommandGroup heading="Beats">
+          {BEATS.map((b) => (
+            <CommandItem
+              key={b.key}
+              value={`beat ${b.key} ${b.label}`}
+              onSelect={() => {
+                if (b.key === "9") {
+                  setEndCard(true)
+                  go(href())
+                  return
+                }
+                go(b.route)
+                if (b.seq) setTimeout(() => startSeq(b.seq!), 450)
+              }}
+            >
+              <span className="w-4 font-mono text-xs text-muted-foreground">{b.key}</span>
+              {b.label}
+              <CommandShortcut>{b.key}</CommandShortcut>
             </CommandItem>
           ))}
-          <CommandItem value="page request r-3 atlas ic memo" onSelect={() => go(href("/requests/r-3"))}>
-            <span className="font-mono text-xs text-muted-foreground">R-3</span>
-            {REQUEST.title}
-            <CommandShortcut>2</CommandShortcut>
-          </CommandItem>
-          <CommandItem value="page connection request cr-7" onSelect={() => go(href("/connections/cr-7"))}>
-            <span className="font-mono text-xs text-muted-foreground">CR-7</span>
-            {CR.title}
-            <CommandShortcut>5</CommandShortcut>
-          </CommandItem>
         </CommandGroup>
         <CommandGroup heading="Sources">
           {SOURCES.map((s) => {
-            const verdict = requestDone ? s.verdict : (nodes[s.id]?.verdict ?? "unchecked")
+            const colour = colourFor(s.id, CURRENT_USER.id, overrides)
             return (
-              <CommandItem key={s.id} value={`source ${s.name} ${s.type} ${s.lane} ${s.verdict}`} onSelect={() => go(href(`/map?source=${s.id}`))}>
-                <SourceIcon type={s.type} size={14} />
-                <span className="flex-1 truncate">{s.name}</span>
-                <VerdictPill verdict={verdict} icon={false} />
-              </CommandItem>
-            )
-          })}
-        </CommandGroup>
-        <CommandGroup heading="People">
-          {Object.values(PEOPLE)
-            .filter((p) => p.kind === "person")
-            .map((p) => (
-              <CommandItem key={p.id} value={`person ${p.name} ${p.role}`} onSelect={() => go(href(`/readiness?owner=${p.id}`))}>
-                <ActorAvatar id={p.id} size="xs" />
-                <span className="flex-1 truncate">{p.name}</span>
-                <span className="text-xs text-muted-foreground">{p.role}</span>
-              </CommandItem>
-            ))}
-        </CommandGroup>
-        <CommandGroup heading="Agents">
-          {AGENT_ORDER.map((id) => {
-            const a = AGENTS[id]
-            return (
-              <CommandItem key={a.id} value={`agent ${a.name} ${a.role}`} onSelect={() => go(href(`/agents/${a.id}`))}>
-                <ActorAvatar id={a.id} size="xs" />
-                <span className="flex-1 truncate font-mono text-[13px]">{a.name}</span>
-                <AgentStatusPill status={liveAgents.includes(id) ? "live" : (a.status ?? "queued")} />
+              <CommandItem key={s.id} value={`source ${colour === "black" ? "restricted" : s.name} ${s.system}`} onSelect={() => go(href(`/map?source=${s.id}`))}>
+                <span className="flex-1 truncate">{colour === "black" ? "Restricted source" : s.name}</span>
+                <ColourPill colour={colour} />
               </CommandItem>
             )
           })}
@@ -109,7 +85,7 @@ export function CommandPalette({ open, onOpenChange }: { open: boolean; onOpenCh
             {rec ? "Exit recording mode" : "Recording mode"}
             <CommandShortcut>⇧F</CommandShortcut>
           </CommandItem>
-          <CommandItem value="reset demo state" onSelect={() => { reset(); onOpenChange(false); toast("Demo reset", { description: `Request submitted, canvas empty, CR-7 at 0 of 2, meter at ${METER.before}%.` }) }}>
+          <CommandItem value="reset demo state" onSelect={() => { reset(); onOpenChange(false); router.push("/signin"); toast("Demo reset", { description: "Back to the start of beat 1." }) }}>
             <RotateCcw className="text-muted-foreground" />
             Reset demo state
             <CommandShortcut>⇧R</CommandShortcut>

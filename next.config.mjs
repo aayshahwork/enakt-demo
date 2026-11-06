@@ -3,9 +3,10 @@ const nextConfig = {
   reactStrictMode: true,
   async redirects() {
     return [
-      { source: "/", destination: "/calloway", permanent: false },
-      { source: "/ashcombe/:path*", destination: "/calloway", permanent: false },
-      { source: "/northfield/:path*", destination: "/calloway", permanent: false },
+      { source: "/", destination: "/signin", permanent: false },
+      { source: "/calloway/:path*", destination: "/kestrel", permanent: false },
+      { source: "/ashcombe/:path*", destination: "/kestrel", permanent: false },
+      { source: "/northfield/:path*", destination: "/kestrel", permanent: false },
     ]
   },
 }

@@ -34,8 +34,8 @@ const mono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: "Enakt — Calloway Hill Partners",
-  description: "A PE firm's first AI agent on real deal data within 30 days, inside the firm's own cloud tenant. Each agent scoped to exactly the deals and data it needs, enforced at the source.",
+  title: "Enakt — Kestrel Ridge Capital",
+  description: "Your first agent on real deal data in 30 days. Enakt runs in the firm's own cloud, maps the firm, scopes each agent to exactly what it needs, and enforces it at the source.",
   robots: { index: false, follow: false },
 }
 

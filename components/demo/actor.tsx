@@ -1,34 +1,26 @@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { ACTORS, type Actor } from "@/lib/demo/fixtures"
+import { PEOPLE, type Actor } from "@/lib/demo/fixtures"
 import { cn } from "@/lib/utils"
-import { Bot, Users } from "lucide-react"
+import { Users } from "lucide-react"
+import { EMark } from "./logo"
 
 const HUES: Record<string, string> = {
-  dana: "bg-signal-soft text-signal",
-  ellen: "bg-merged-soft text-merged",
-  tom: "bg-verified-soft text-verified",
-  nina: "bg-flagged-soft text-flagged",
-  owen: "bg-stale-soft text-stale",
-  grace: "bg-abort-soft text-abort",
-  "atlas-team": "bg-gap-soft text-gap",
+  maya: "bg-signal-soft text-signal",
+  daniel: "bg-verified-soft text-verified",
+  ruth: "bg-merged-soft text-merged",
+  leo: "bg-flagged-soft text-flagged",
 }
 
 export function getActor(id: string): Actor {
-  return ACTORS[id] ?? { id, name: id, role: "", kind: "person", initials: id.slice(0, 2).toUpperCase() }
+  return PEOPLE[id] ?? { id, name: id, role: "", kind: "person", initials: id.slice(0, 2).toUpperCase() }
 }
 
 export function ActorAvatar({ id, size = "md", className }: { id: string; size?: "xs" | "sm" | "md" | "lg"; className?: string }) {
   const a = getActor(id)
   const dim = { xs: "h-5 w-5 text-[9px]", sm: "h-6 w-6 text-[10px]", md: "h-8 w-8 text-xs", lg: "h-10 w-10 text-sm" }[size]
-  if (a.kind === "agent") {
-    return (
-      <span className={cn("inline-flex shrink-0 items-center justify-center rounded-md border border-dashed border-signal/40 bg-signal-soft text-signal", dim, className)} title={a.name}>
-        <Bot className="h-[60%] w-[60%]" />
-      </span>
-    )
-  }
-  if (a.kind === "group") {
+  const px = { xs: 20, sm: 24, md: 32, lg: 40 }[size]
+  if (a.kind === "agent") return <EMark size={px} className={className} />
+  if (a.kind === "team") {
     return (
       <span className={cn("inline-flex shrink-0 items-center justify-center rounded-full bg-gap-soft text-gap", dim, className)} title={a.name}>
         <Users className="h-[55%] w-[55%]" />
@@ -42,31 +34,12 @@ export function ActorAvatar({ id, size = "md", className }: { id: string; size?:
   )
 }
 
-/** Every agent runs on the in-tenant model. */
-export function ModelBadge({ className }: { className?: string }) {
-  return (
-    <Badge variant="gap" className={cn("font-mono text-[10px]", className)}>
-      in-tenant model
-    </Badge>
-  )
-}
-
-export function ActorName({ id, withRole, withModel = true, className }: { id: string; withRole?: boolean; withModel?: boolean; className?: string }) {
+export function ActorName({ id, withRole, className }: { id: string; withRole?: boolean; className?: string }) {
   const a = getActor(id)
   return (
     <span className={cn("inline-flex items-center gap-1.5", className)}>
-      <span className={cn("font-medium", a.kind === "agent" && "font-mono text-[13px]")}>{a.name}</span>
-      {withModel && a.kind === "agent" && <ModelBadge />}
+      <span className="font-medium">{a.name}</span>
       {withRole && a.role && <span className="text-muted-foreground">· {a.role}</span>}
-    </span>
-  )
-}
-
-export function ActorChip({ id, size = "sm", withRole, withModel }: { id: string; size?: "xs" | "sm" | "md"; withRole?: boolean; withModel?: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-2">
-      <ActorAvatar id={id} size={size} />
-      <ActorName id={id} withRole={withRole} withModel={withModel} />
     </span>
   )
 }
