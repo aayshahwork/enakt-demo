@@ -41,16 +41,18 @@ function Trace() {
           const m = KIND_META[s.kind]
           const Icon = m.icon
           const blocked = s.kind === "blocked"
-          const title = s.kind === "done" && !writeEnabled ? "Screen sent to Maya's inbox" : s.title
+          const title = s.kind === "done" && !writeEnabled ? "Screen sent to Maya’s inbox" : s.title
+          const detail = s.kind === "done" && !writeEnabled ? "One page, waiting in Maya’s inbox. It posts to the Juniper deal in DealCloud once she accepts it." : s.detail
+          const path = s.kind === "done" && !writeEnabled ? "Inbox · Maya Chen · Screens to review" : s.path
           return (
             <motion.li key={s.n} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className={cn("rounded-lg border bg-card px-3 py-2", blocked && "border-abort/40", blocked && blockedPulse && "animate-flashred")}>
               <div className="flex items-start gap-2.5">
                 <Icon className={cn("mt-0.5 h-4 w-4 shrink-0", m.cls)} />
                 <div className="min-w-0 flex-1">
                   <div className={cn("text-sm font-medium leading-5", blocked && "text-abort")}>{title}</div>
-                  <div className="text-xs leading-5 text-muted-foreground">{s.detail}</div>
-                  <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground" title={s.path}>
-                    {s.path}
+                  <div className="text-xs leading-5 text-muted-foreground">{detail}</div>
+                  <div className="mt-1 truncate font-mono text-[11px] text-muted-foreground" title={path}>
+                    {path}
                   </div>
                   {blocked && (
                     <div className="mt-2 inline-flex items-center gap-1.5 rounded-md border border-abort/30 bg-abort-soft px-2 py-1 text-[11px] font-medium text-abort">

@@ -308,7 +308,7 @@ export type OutputBlock = { id: string; heading: string; text: string; cites: st
 export const FRESH_OUTPUT: OutputBlock[] = [
   { id: "decision", heading: "Decision", text: "Pass with questions. Fits the industrial services thesis on sector, size and geography.", cites: ["Q3 criteria"] },
   { id: "revenue", heading: "Revenue", text: `${JUNIPER.teaserRevenue} trailing twelve months, growing 11% a year.`, cites: [`${JUNIPER.teaserFile} · p.2`] },
-  { id: "ebitda", heading: "Adjusted EBITDA", text: `${JUNIPER.ebitda}, an 17% margin after owner add-backs.`, cites: [`${JUNIPER.cimFile} · ${JUNIPER.ebitdaPage}`] },
+  { id: "ebitda", heading: "Adjusted EBITDA", text: `${JUNIPER.ebitda}, a 17% margin after owner add-backs.`, cites: [`${JUNIPER.cimFile} · ${JUNIPER.ebitdaPage}`] },
   { id: "customers", heading: "Customers", text: "Diversified across regional utilities and industrial accounts. The top customer is significant and worth a question in the first call.", cites: [`${JUNIPER.cimFile} · ${JUNIPER.concentrationPage}`] },
   { id: "next", heading: "Suggested questions", text: "Contract terms with the top customer. Capex plan. Management retention after close.", cites: [] },
 ]

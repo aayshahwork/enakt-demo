@@ -1,85 +1,65 @@
-# Enakt PE demo — Calloway Hill Partners
+# Enakt demo — Kestrel Ridge Capital
 
-Frontend-only product demo for Enakt, retargeted to a mid-market private equity firm. No backend,
-no auth, no API routes. Every name, number and date comes from `lib/demo/fixtures.ts`; the request
-scene and the agent run are typed scripts in `lib/demo/script.ts`, played with timers by
-`lib/demo/player.ts`, into one Zustand store (`lib/demo/store.ts`) that every page reads. Same
-clicks, same result, every take.
+Frontend-only recorded product demo for Enakt, the firm's Chief AI Officer. No backend, no auth, no
+API routes, no calls to any model. Every person, deal, company and number is fiction and lives in
+`lib/demo/fixtures.ts`. Every animated sequence is a typed, fixed-timing script in `lib/demo/script.ts`,
+played by `lib/demo/player.ts` into one Zustand store (`lib/demo/store.ts`). Two takes look identical.
 
-The pitch the demo proves: a PE firm's first AI agent working on its real deal data within 30 days,
-inside the firm's own cloud tenant. Each agent is scoped to exactly the deals and data it needs,
-enforced at the source. Enakt Inc. never has access.
+The pitch the demo proves: "Your first agent on real deal data in 30 days."
 
 ## Run
 
 ```bash
 pnpm install
-pnpm dev        # http://localhost:3000 → redirects to /calloway
-pnpm build      # passes with zero type errors
+pnpm dev        # http://localhost:3000 → /signin
+pnpm build      # zero type or lint errors
 ```
 
-## The flow (under 2:45 at 1.5×)
+## The storyboard, one number key per beat
 
-Request → clarifications → Map with View as → Readiness conflict → CR-7 two approvals → Policies →
-Agent run → Rollout. `Shift+R` resets everything.
+| Key | Beat | Route | What plays |
+|---|---|---|---|
+| `1` | Sign in | `/signin` | Pre-filled, simulated. Lands on the overview. |
+| `2` | Firm map | `/kestrel/map` | The map fills the screen and a timed tour opens one green, yellow, red and black node. |
+| `3` | The ask | `/kestrel/requests/new` | Maya's request types itself; the status line shows Enakt working in the firm's cloud on metadata only. |
+| `4` | Questions and scope | `/kestrel/requests/r-7` | Six questions answered with quick-pick chips; the scope mini-map lights up; three owners confirm. |
+| `5` | Building the agent | `/kestrel/agents/cim-screener/build` | Nine checklist steps tick with one-line results. |
+| `6` | Security review | `/kestrel/agents/cim-screener` | Permissions per source, enforced at source. Maya flips the DealCloud write toggle. |
+| `7` | Deploy | `/kestrel/agents/cim-screener/deploy` | Summary, dry run, approvals. Deploy moves the pipeline, turns deals@ yellow, 38% → 43%, Day 19 of 30. |
+| `8` | In action | `/kestrel/agents/cim-screener/run` | Project Juniper arrives; the blocked Atlas read; fresh vs trained side by side; the evaluation trend. |
+| `9` | Close | `/kestrel` | The overview with the end card. |
 
-## Routes
-
-| Route | Page |
-|---|---|
-| `/calloway` | Home: AI-ready meter, agents, needs attention, this week by owner, activity |
-| `/calloway/requests` | Request list (R-1 … R-5) |
-| `/calloway/requests/r-3` | Request R-3: scope plan, three clarifications, canvas builds deal lanes live |
-| `/calloway/map` | Map: deal-lane canvas, View as (Dana / Atlas deal team / atlas-memo-agent), detail sheet |
-| `/calloway/readiness` | Readiness: 12 sources by urgency, Atlas TTM revenue conflict panel |
-| `/calloway/connections` | Connection request list |
-| `/calloway/connections/cr-7` | CR-7: Conversation / Changes / Checks, two approvals, merge |
-| `/calloway/policies` | Per-agent policy cards (Readable / Policy as code) and the people × deals matrix |
-| `/calloway/agents` | Agent list |
-| `/calloway/agents/atlas-memo-agent` | Agent run: 8-step trace, memo-styled draft with citations, Scope and History tabs |
-| `/calloway/rollout` | 30-day plan with milestones and gates, request queue |
-| `/calloway/audit` | Audit log (20 entries plus whatever the demo adds) |
-| `/calloway/settings` | Deployment, Models, Members, Connections (`?tab=`) |
+Keys 2, 3, 4, 5 and 8 start their sequence on arrival, so pressing 1–9 in order plays the whole
+storyboard. Beats 6 and 7 are Maya's clicks: the write toggle and Deploy.
 
 ## Recording
 
 | Key | Action |
 |---|---|
-| `1` – `7` | Home, Request R-3, Map, Readiness, CR-7, Policies, Agent run |
-| `8` | Rollout |
-| `Space` | Pause or resume any running script |
-| `Shift+R` | Reset: request submitted, scope plan empty, canvas empty, 22%, CR-7 at 0 of 2, agent not run, Day 12 |
-| `Shift+F` | Recording mode: hides the synthetic-data note and bell pulse, larger hit areas, scripts at 1.5× |
-| `Shift+D` | Toggle dark mode |
-| `⌘K` | Command palette: pages, sources, people, agents |
+| `Space` | Pause or resume any running sequence |
+| `Shift+R` | Reset to the start of beat 1 |
+| `Shift+F` or `?rec=1` | Recording mode: hides demo-only affordances, sequences at 1.5× |
+| `Shift+D` | Toggle dark mode (light is the recording default) |
+| `⌘K` | Palette: beats, sources, actions (hidden in recording mode) |
 
-The `2×` toggle on the request page also sets the script speed. State persists in `sessionStorage`
-for the tab, so an accidental reload lands on the finished state of whatever was running.
-
-## What changes during the flow
-
-- **Request R-3**: the scan line animates, the scope plan fills (Needs / Ask / Never touches), three
-  Q&As stream, and the canvas builds the lanes. Nina's third answer flips the Atlas data room to
-  Conflict (TTM revenue $48.2M in the CIM vs $46.9M in the monthly P&L, held for her).
-- **CR-7**: Approve as Ellen Marsh → 1 of 2. Approve as Grace Liu → 1.2s merge. On merge the agent
-  node goes live on the canvas, the meter animates 22% → 34%, a toast fires, audit entries land, and
-  the Day 15 rollout milestone checks.
-- **Agent run**: step 6 is blocked by the Birch NDA (pause, red flash), step 7 keeps both revenue
-  values, and the draft section streams with file + page/cell citation chips.
+State persists in `sessionStorage` for the tab. A reload mid-sequence lands on the finished state.
+Screenshots of every beat at 1920×1080 are under `docs/recording/`.
 
 ## Layout
 
-- `app/(demo)/[firm]/**` — pages. Only `calloway` is a valid firm; `/ashcombe` and `/northfield`
-  redirect to it.
-- `app/(demo)/[firm]/(canvas)/` — the request page and the map share this layout so the React Flow
-  canvas stays mounted between the two routes.
-- `components/demo/deal-canvas.tsx` — the canvas: lane group nodes, source nodes with readiness
-  strips, agent nodes, dashed scope edges, policy badges on lane boundaries.
-- `components/shell/*` — sidebar, top bar (environment chips, access-log popover, AI-ready bar,
-  rollout day chip), palette, skeletons.
+- `app/signin/` — beat 1, outside the shell.
+- `app/(demo)/[firm]/` — the shell pages. Only `kestrel` is a valid firm; older slugs redirect.
+- `app/(demo)/[firm]/(canvas)/` — the firm map and the request page share this layout so the React
+  Flow canvas stays mounted between them.
+- `app/(archive)/_calloway/` and `archive/` — the previous Calloway Hill take, out of the nav and the
+  build.
+- `components/demo/firm-map.tsx` — the map: brain at the centre, four readiness colours, black tiles
+  for what the viewer cannot see, person-nodes, scope mode for beat 4.
+- `components/shell/*` — sidebar, top bar (trust strip, readiness, rollout chip), palette, skeletons.
 - `lib/demo/*` — fixtures, script, player, store, formatting helpers.
 
 ## Copy rules
 
-Fictional firm, people and companies. Vendor names appear as plain text only, with generic Lucide
-icons. Copy is about citations, held values, scopes and approvals.
+Fictional firm, people and companies. Vendor names as plain text only, no logos. Copy is about
+citations, kept-both values, scopes enforced at source, and approvals. The firm runs Enakt in its own
+cloud; the model runs there too; Enakt Inc. has no access.

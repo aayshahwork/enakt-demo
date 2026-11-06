@@ -51,16 +51,17 @@ export function KeyboardShortcuts() {
       if (isTyping(e.target)) return
       if (e.shiftKey && e.key.toLowerCase() === "r") {
         e.preventDefault()
+        const wasRec = useDemo.getState().rec
         reset()
         router.push("/signin")
-        toast("Demo reset", { description: "Back to the start of beat 1. Readiness 38%, no agent requested, Day 12 of 30." })
+        if (!wasRec) toast("Demo reset", { description: "Back to the start of beat 1. Readiness 38%, no agent requested, Day 12 of 30." })
         return
       }
       if (e.shiftKey && e.key.toLowerCase() === "f") {
         e.preventDefault()
         const next = !useDemo.getState().rec
         toggleRec()
-        toast(next ? "Recording mode on" : "Recording mode off", { description: next ? "Demo-only affordances hidden, sequences at 1.5×." : "Sequences back to 1×." })
+        if (!next) toast("Recording mode off", { description: "Sequences back to 1×." })
         return
       }
       if (e.shiftKey && e.key.toLowerCase() === "d") {
